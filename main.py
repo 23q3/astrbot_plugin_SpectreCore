@@ -56,6 +56,11 @@ class SpectreCore(Star):
         try:           
             # 保存机器人消息
             if event._result and hasattr(event._result, "chain"):
+                # 检查是否为重置历史记录的提示消息，如果是则不保存
+                message_text = "".join([i.text for i in event._result.chain if hasattr(i, "text")])
+                if "已成功重置" in message_text and "的历史记录喵~" in message_text:
+                    return
+                
                 HistoryStorage.save_bot_message_from_chain(event._result.chain, event)
                 logger.debug(f"已保存bot回复消息到历史记录")
                 
