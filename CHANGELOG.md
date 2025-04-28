@@ -1,5 +1,10 @@
 # 📋 更新日志
 
+### v2.1.1 (2025-04-29)
+- ✨ **新增黑名单关键词功能** - 添加黑名单关键词配置，可以设置不触发回复的关键词
+- 🐛 **修复重置历史记录问题** - 修复重置聊天记录后提示消息被错误保存到历史记录的问题 [#41](https://github.com/23q3/astrbot_plugin_SpectreCore/issues/41)
+- 🔧 **优化配置结构** - 将黑名单关键词配置移动到model_frequency配置下，优化配置结构
+
 ### v2.1.0 (2025-04-12)
 - 🔄 **数据存储格式优化** - 使用jsonpickle库替换pickle，提高数据可读性和跨平台兼容性
 - 🐛 **修复Docker环境兼容性** - 采用JSON序列化格式，彻底解决Docker环境下消息历史存取问题 [#31](https://github.com/23q3/astrbot_plugin_SpectreCore/issues/31)
