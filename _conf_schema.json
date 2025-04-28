@@ -51,6 +51,12 @@
                 "type":"list",
                 "default":[]
             },
+            "blacklist_keywords": {
+                "description": "黑名单关键词",
+                "type": "list",
+                "hint": "如果消息中包含这些关键词，则不回复该消息",
+                "default": []
+            },
             "method":{
                 "type":"string",
                 "description":"使用什么方式决定是否调用模型",

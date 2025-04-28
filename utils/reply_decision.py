@@ -31,6 +31,12 @@ class ReplyDecision:
             if LLMUtils.is_llm_in_progress(platform_name, is_private_chat, chat_id):
                 logger.debug(f"当前聊天已有大模型处理中，不进行回复")
                 return False
+                
+            # 检查消息是否包含黑名单关键词
+            blacklist_keywords = config.get("model_frequency", {}).get("blacklist_keywords", [])
+            if blacklist_keywords and ReplyDecision._check_blacklist_keywords(event, blacklist_keywords):
+                logger.debug("消息中包含黑名单关键词，不进行回复")
+                return False
             
             # 检查配置中的回复规则
             return ReplyDecision._check_reply_rules(event, config)
@@ -106,6 +112,28 @@ class ReplyDecision:
         
         # 检查是否包含关键词
         for keyword in keywords:
+            if keyword in message_text:
+                return True
+                
+        return False
+        
+    @staticmethod
+    def _check_blacklist_keywords(event: AstrMessageEvent, blacklist_keywords: list) -> bool:
+        """
+        检查消息是否包含黑名单关键词
+        
+        Args:
+            event: 消息事件
+            blacklist_keywords: 黑名单关键词列表
+            
+        Returns:
+            是否包含黑名单关键词
+        """
+        # 获取消息文本
+        message_text = event.get_message_outline()
+        
+        # 检查是否包含黑名单关键词
+        for keyword in blacklist_keywords:
             if keyword in message_text:
                 return True
                 
