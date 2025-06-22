@@ -155,6 +155,7 @@ class LLMUtils:
 
         # 结尾提示词
         prompt += "\n(在聊天记录中，你的用户名以AstrBot被代替了)"
+        prompt += "\n(如果你想回复某人，不要使用类似 [At:id(昵称)]这样的格式)"
         # 判断是否开启读空气
         if config.get("read_air", False):
             prompt += "\n\n你的反应是:\n(如果你想发送一条消息，直接输出发送的内容，如果你选择忽略，直接输出<NO_RESPONSE>)"
