@@ -1,6 +1,7 @@
 from astrbot.api.all import *
 from typing import Dict, Any, Optional
 import random
+import time
 from .llm_utils import LLMUtils
 
 class ReplyDecision:
@@ -30,6 +31,12 @@ class ReplyDecision:
             # 检查是否已有大模型在处理
             if LLMUtils.is_llm_in_progress(platform_name, is_private_chat, chat_id):
                 logger.debug(f"当前聊天已有大模型处理中，不进行回复")
+                return False
+            
+            # 检查是否处于临时静默状态
+            mute_info = config.get("_temp_mute", {})
+            if mute_info and mute_info.get("until", 0) > time.time():
+                logger.debug(f"当前处于临时静默状态，不进行回复")
                 return False
                 
             # 检查消息是否包含黑名单关键词

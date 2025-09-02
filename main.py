@@ -1,6 +1,7 @@
 from astrbot.api.all import *
 from astrbot.api.event import filter
 from .utils import *
+import time
 
 @register(
     "spectrecore",
@@ -119,10 +120,12 @@ class SpectreCore(Star):
             "使用reset指令重置当前聊天记录 如/sc reset\n"
             "   你也可以重置指定群聊天记录 如/sc reset 群号\n"
             "使用history指令可以查看最近聊天记录 如/sc history\n"
+            "使用mute/闭嘴指令临时禁用自动回复 如/sc mute 5 或 /sc 闭嘴 10\n"
+            "使用unmute/说话指令解除禁用 如/sc unmute 或 /sc 说话\n"
             "↓强烈建议您阅读Github中的README文档\n↓"
             "https://github.com/23q3/astrbot_plugin_SpectreCore"
         )
-
+    @filter.permission_type(filter.PermissionType.ADMIN)
     @spectrecore.command("history")
     async def history(self, event: AstrMessageEvent, count: int = 10):
         """查看最近的聊天记录喵，默认10条喵，示例/sc history 5"""
@@ -174,7 +177,7 @@ class SpectreCore(Star):
         except Exception as e:
             logger.error(f"获取历史记录时发生错误: {e}")
             yield event.plain_result(f"获取历史记录失败喵：{str(e)}")
-
+    @filter.permission_type(filter.PermissionType.ADMIN)
     @spectrecore.command("reset")
     async def reset(self, event: AstrMessageEvent, group_id: str = None):
         """重置历史记录喵，不带参数重置当前聊天记录，带群号则重置指定群聊记录 如/sc reset 123456"""
@@ -217,6 +220,54 @@ class SpectreCore(Star):
             logger.error(f"重置历史记录时发生错误: {e}")
             yield event.plain_result(f"重置历史记录失败喵：{str(e)}")
 
+    @filter.permission_type(filter.PermissionType.ADMIN)
+    @spectrecore.command("mute", alias=['闭嘴', 'shutup'])
+    async def mute(self, event: AstrMessageEvent, minutes: int = 5):
+        """临时禁用自动回复，默认5分钟喵，示例/sc mute 10 或 /sc 闭嘴 3"""
+        try:
+            # 计算禁用结束时间
+            mute_until = time.time() + (minutes * 60)
+            
+            # 保存到配置中
+            if "_temp_mute" not in self.config:
+                self.config["_temp_mute"] = {}
+            
+            self.config["_temp_mute"]["until"] = mute_until
+            self.config["_temp_mute"]["by"] = event.get_sender_id()
+            self.config["_temp_mute"]["at"] = time.time()
+            
+            # 保存配置
+            self.config.save_config()
+            
+            yield event.plain_result(f"好的喵，我会安静 {minutes} 分钟的~")
+            
+        except Exception as e:
+            logger.error(f"执行闭嘴指令时发生错误: {e}")
+            yield event.plain_result(f"执行闭嘴指令失败喵：{str(e)}")
+
+    @filter.permission_type(filter.PermissionType.ADMIN)
+    @spectrecore.command("unmute", alias=['说话', 'speak'])
+    async def unmute(self, event: AstrMessageEvent):
+        """解除禁用自动回复喵"""
+        try:
+            # 检查是否处于静默状态
+            mute_info = self.config.get("_temp_mute", {})
+            if not mute_info or mute_info.get("until", 0) <= time.time():
+                yield event.plain_result("我现在本来就在正常说话喵~")
+                return
+            
+            # 解除静默
+            if "_temp_mute" in self.config:
+                del self.config["_temp_mute"]
+                self.config.save_config()
+            
+            yield event.plain_result("好耶！我又可以说话了喵~")
+            
+        except Exception as e:
+            logger.error(f"解除闭嘴时发生错误: {e}")
+            yield event.plain_result(f"解除闭嘴失败喵：{str(e)}")
+
+    @filter.permission_type(filter.PermissionType.ADMIN)
     @spectrecore.command("callllm")
     async def callllm(self, event: AstrMessageEvent):
         """触发一次大模型回复 这是用来开发中测试的喵"""
