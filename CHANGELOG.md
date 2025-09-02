@@ -1,5 +1,9 @@
 # 📋 更新日志
 
+### v2.1.5 (2025-09-03)
+- ✨ **新增临时禁言功能** - 添加闭嘴/说话指令，支持临时禁用自动回复功能，默认5分钟，可自定义时长 [#63](https://github.com/23q3/astrbot_plugin_SpectreCore/issues/63)
+- 🔒 **添加权限控制** - 对管理指令添加了管理员权限限制
+
 ### v2.1.4 (2025-06-28)
 - ✨ **为LLM回复添加限制条件** - 在结尾提示词中添加对于回复的限制，避免LLM使用[At:id(昵称)]这样的格式 [#54](https://github.com/23q3/astrbot_plugin_SpectreCore/issues/54)@Fossssss
 - 🐛 **修复与其他插件的兼容性问题** - 移除AiocqhttpMessageEvent类型断言，使用安全检查和异常处理机制，解决其他插件构造输入时的报错问题 [#57](https://github.com/23q3/astrbot_plugin_SpectreCore/issues/57)
