@@ -43,9 +43,15 @@ class SpectreCore(Star):
             
     async def _process_message(self, event: AstrMessageEvent):
         """处理消息的通用逻辑：保存历史记录并尝试回复"""
+        # 过滤空消息(napcat会发送私聊对方正在输入的状态，导致astrbot识别为空消息)
+        message_outline = event.get_message_outline()
+        if not message_outline or message_outline.strip() == "":
+            logger.debug("收到空消息，忽略处理")
+            return
+
         # 保存用户消息到历史记录
         await HistoryStorage.process_and_save_user_message(event)
-        
+
         # 尝试自动回复
         if ReplyDecision.should_reply(event, self.config):
             async for result in ReplyDecision.process_and_reply(event, self.config, self.context):
