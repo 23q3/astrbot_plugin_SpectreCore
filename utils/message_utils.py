@@ -1,5 +1,6 @@
 from astrbot.api.all import *
 from typing import List, Dict, Any
+import os
 import time
 from datetime import datetime
 from .image_caption import ImageCaptionUtils

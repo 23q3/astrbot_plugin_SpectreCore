@@ -69,8 +69,8 @@ class SpectreCore(Star):
             logger.error(f"处理bot发送的消息时发生错误: {e}")
 
     from astrbot.api.provider import LLMResponse
-    @filter.on_llm_response()
-    async def on_llm_resp(self, event: AstrMessageEvent, resp: LLMResponse , priority=114514): # 请注意有三个参数
+    @filter.on_llm_response(priority=114514)
+    async def on_llm_resp(self, event: AstrMessageEvent, resp: LLMResponse):
         """处理大模型回复喵"""
         logger.debug(f"收到大模型回复喵: {resp}")
         try:

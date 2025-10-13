@@ -154,7 +154,8 @@ class LLMUtils:
                 prompt += "\n\n你没看见任何聊天记录，看来最近没有消息。"
         except Exception as e:
             logger.error(f"获取或格式化历史记录失败: {e}")
-            return None
+            # 发生错误时使用空历史记录继续
+            prompt += "\n\n你没看见任何聊天记录，看来最近没有消息。"
 
         # 结尾提示词
         prompt += "\n(在聊天记录中，你的用户名以AstrBot被代替了)"

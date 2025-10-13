@@ -382,8 +382,11 @@ class HistoryStorage:
                             # 规范化路径（兼容 Docker 环境）
                             persistent_file_path = os.path.abspath(persistent_file_path)
 
+                            # 使用正斜杠规范化路径（兼容 Windows 和 Unix）
+                            normalized_path = persistent_file_path.replace('\\', '/')
+
                             # 存储绝对路径到 file 字段（使用 file:/// 前缀，兼容 AstrBot）
-                            component.file = f"file:///{persistent_file_path}"
+                            component.file = f"file:///{normalized_path}"
 
                             logger.debug(f"成功将图片保存为持久化文件: {persistent_file_path}")
                         else:
