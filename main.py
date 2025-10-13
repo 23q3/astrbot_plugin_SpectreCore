@@ -7,7 +7,7 @@ import time
     "spectrecore",
     "23q3",
     "使大模型更好的主动回复群聊中的消息，带来生动和沉浸的群聊对话体验",
-    "2.1.5",
+    "2.1.6",
     "https://github.com/23q3/astrbot_plugin_SpectreCore"
 )
 class SpectreCore(Star):
@@ -43,9 +43,15 @@ class SpectreCore(Star):
             
     async def _process_message(self, event: AstrMessageEvent):
         """处理消息的通用逻辑：保存历史记录并尝试回复"""
+        # 过滤空消息(napcat会发送私聊对方正在输入的状态，导致astrbot识别为空消息)
+        message_outline = event.get_message_outline()
+        if not message_outline or message_outline.strip() == "":
+            logger.debug("收到空消息，忽略处理")
+            return
+
         # 保存用户消息到历史记录
         await HistoryStorage.process_and_save_user_message(event)
-        
+
         # 尝试自动回复
         if ReplyDecision.should_reply(event, self.config):
             async for result in ReplyDecision.process_and_reply(event, self.config, self.context):
@@ -69,8 +75,8 @@ class SpectreCore(Star):
             logger.error(f"处理bot发送的消息时发生错误: {e}")
 
     from astrbot.api.provider import LLMResponse
-    @filter.on_llm_response()
-    async def on_llm_resp(self, event: AstrMessageEvent, resp: LLMResponse , priority=114514): # 请注意有三个参数
+    @filter.on_llm_response(priority=114514)
+    async def on_llm_resp(self, event: AstrMessageEvent, resp: LLMResponse):
         """处理大模型回复喵"""
         logger.debug(f"收到大模型回复喵: {resp}")
         try:

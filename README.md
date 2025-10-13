@@ -4,7 +4,7 @@
 
 ![SpectreCore](https://avatars.githubusercontent.com/u/129108081?s=48&v=4)
 
-[![version](https://img.shields.io/badge/version-v2.1.5-blue.svg?style=flat-square)](https://github.com/23q3/astrbot_plugin_SpectreCore)
+[![version](https://img.shields.io/badge/version-v2.1.6-blue.svg?style=flat-square)](https://github.com/23q3/astrbot_plugin_SpectreCore)
 [![license](https://img.shields.io/badge/license-AGPL--3.0-green.svg?style=flat-square)](LICENSE)
 [![author](https://img.shields.io/badge/author-23q3-orange.svg?style=flat-square)](https://github.com/23q3)
 
@@ -68,9 +68,9 @@ SpectreCore (影芯) 是一个为 AstrBot 设计的高级群聊互动插件，�
 
 ## 📋 最新版本
 
-### v2.1.5 (2025-09-03)
-- ✨ **新增临时禁言功能** - 添加闭嘴/说话指令，支持临时禁用自动回复功能，默认5分钟，可自定义时长 [#63](https://github.com/23q3/astrbot_plugin_SpectreCore/issues/63)
-- 🔒 **添加权限控制** - 对管理指令添加了管理员权限限制
+### v2.1.6 (2025-10-13)
+- 🐛 **修复空消息异常** - 修复napcat发送私聊"正在输入"状态时，导致插件异常的问题 [#70](https://github.com/23q3/astrbot_plugin_SpectreCore/issues/70)
+- 🐛 **修复代码问题并改进错误处理** - 修复装饰器参数位置错误、历史记录加载失败崩溃问题，改进路径处理和日志记录
 
 查看完整的[更新日志](./CHANGELOG.md)，了解项目的版本历史和功能变化。
 
