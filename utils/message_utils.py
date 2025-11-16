@@ -117,9 +117,18 @@ class MessageUtils:
                 elif component_type == "face" or isinstance(i, Face):
                     outline += f"[表情:{getattr(i, 'id', '')}]"
                 elif component_type == "at" or isinstance(i, At):
-                    outline += f"[At:{getattr(i, 'qq', '')}{f'({i.name})' if hasattr(i, 'name') and i.name else ''}]"
-                elif component_type == "atall" or isinstance(i, AtAll):
-                    outline += "[At:全体成员]"
+                    qq = getattr(i, 'qq', '')
+                    name = getattr(i, 'name', '')
+                    
+                    # 处理全体@
+                    if str(qq).lower() == "all":
+                        outline += "@全体成员"
+                    # 有昵称时显示昵称+QQ
+                    elif name:
+                        outline += f"@{name}({qq})"
+                    # 没有昵称时只显示QQ
+                    else:
+                        outline += f"@{qq}"
                 elif component_type == "record" or isinstance(i, Record):
                     outline += "[语音]"
                 elif component_type == "video" or isinstance(i, Video):
