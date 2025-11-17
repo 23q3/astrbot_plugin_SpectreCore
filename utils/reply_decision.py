@@ -87,7 +87,14 @@ class ReplyDecision:
         # 根据不同方法判断
         if method == "概率回复":
             prob_config = frequency_config.get("probability", {})
-            probability = prob_config.get("probability", 0.1)
+            
+            # 私聊固定概率为1，群聊使用配置概率
+            if event.is_private_chat():
+                probability = 1.0  # 私聊总是回复
+                logger.debug("私聊消息，固定概率为1，总是回复")
+            else:
+                probability = prob_config.get("probability", 0.1)  # 群聊使用配置概率
+                logger.debug(f"群聊消息，使用配置概率: {probability}")
             
             # 使用概率计算是否回复
             should_reply = random.random() < probability
@@ -163,13 +170,13 @@ class ReplyDecision:
         platform_name = event.get_platform_name()
         is_private = event.is_private_chat()
         chat_id = event.get_sender_id() if is_private else event.get_group_id()
-        
+
         # 标记开始处理
         LLMUtils.set_llm_in_progress(platform_name, is_private, chat_id)
-        
+
         try:
             # 调用大模型并发送回复
             yield await LLMUtils.call_llm(event, config, context)
         finally:
             # 标记处理完成
-            LLMUtils.set_llm_in_progress(platform_name, is_private, chat_id, False) 
+            LLMUtils.set_llm_in_progress(platform_name, is_private, chat_id, False)
