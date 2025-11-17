@@ -4,7 +4,7 @@
 
 ![SpectreCore](https://avatars.githubusercontent.com/u/129108081?s=48&v=4)
 
-[![version](https://img.shields.io/badge/version-v2.1.6-blue.svg?style=flat-square)](https://github.com/23q3/astrbot_plugin_SpectreCore)
+[![version](https://img.shields.io/badge/version-v2.1.7-blue.svg?style=flat-square)](https://github.com/23q3/astrbot_plugin_SpectreCore)
 [![license](https://img.shields.io/badge/license-AGPL--3.0-green.svg?style=flat-square)](LICENSE)
 [![author](https://img.shields.io/badge/author-23q3-orange.svg?style=flat-square)](https://github.com/23q3)
 
@@ -54,9 +54,11 @@ SpectreCore (影芯) 是一个为 AstrBot 设计的高级群聊互动插件，�
 1. 首先确保已部署 [AstrBot](https://github.com/Soulter/AstrBot)
 2. 在插件市场中搜索 SpectreCore 点击安装
    或点击右下角加号，输入本插件仓库链接安装：
+
    ```
    https://github.com/23q3/astrbot_plugin_SpectreCore
    ```
+
 3. 打开插件的配置界面，配置好相关选项，即可开始使用
 
 ## 📖 文档
@@ -68,9 +70,13 @@ SpectreCore (影芯) 是一个为 AstrBot 设计的高级群聊互动插件，�
 
 ## 📋 最新版本
 
-### v2.1.6 (2025-10-13)
-- 🐛 **修复空消息异常** - 修复napcat发送私聊"正在输入"状态时，导致插件异常的问题 [#70](https://github.com/23q3/astrbot_plugin_SpectreCore/issues/70)
-- 🐛 **修复代码问题并改进错误处理** - 修复装饰器参数位置错误、历史记录加载失败崩溃问题，改进路径处理和日志记录
+### v2.1.7 (2025-11-17)
+
+- 🐛 **修复AstrBot兼容性问题** - 移除对不存在的 `Anonymous` 等消息组件类的依赖，使用类型字符串检查替代类实例检查，兼容 AstrBot 新版本
+- ⚡ **优化私聊回复机制** - 将私聊回复概率固定为1，确保历史消息格式统一
+- ⚡ **优化引用消息显示** - 改进 Reply 组件处理，提供更完整的发送者信息和内容
+- ⚡ **优化@消息处理** - 重构 'at' 和 'atall' 组件处理逻辑，提高代码清晰度和功能性
+- [#72](https://github.com/23q3/astrbot_plugin_SpectreCore/issues/72) [#73](https://github.com/23q3/astrbot_plugin_SpectreCore/pull/73) @Hola-Gracias
 
 查看完整的[更新日志](./CHANGELOG.md)，了解项目的版本历史和功能变化。
 
@@ -81,7 +87,7 @@ SpectreCore (影芯) 是一个为 AstrBot 设计的高级群聊互动插件，�
 
 ### ⚠️ 更新到2.0.0版本的用户注意
 
-- 删除Astrbot目录下的 data\config\astrbot_plugin_SpectreCore_config.json 否则会出现重复配置 且排版混乱(Astrbot特性导致) 
+- 删除Astrbot目录下的 data\config\astrbot_plugin_SpectreCore_config.json 否则会出现重复配置 且排版混乱(Astrbot特性导致)
 - 这次更新是一次完全重构，抛弃了使用协议端api获取聊天记录的方式，而是基于Astrbot本身。
 
 - 这导致了 对于aiocqhttp平台 插件不再支持以下功能:
@@ -125,7 +131,7 @@ SpectreCore (影芯) 是一个为 AstrBot 设计的高级群聊互动插件，�
 
 <div align="center">
 
-**[SpectreCore (影芯)](https://github.com/23q3/astrbot_plugin_SpectreCore)** | Powered by [AstrBot](https://github.com/Soulter/AstrBot)
+**[SpectreCore (影芯)](https://github.com/23q3/astrbot_plugin_SpectreCore)** | Powered by [AstrBot](https://github.com/AstrBotDevs/AstrBot)
 
 <sub>Made with ❤️ by [23q3](https://github.com/23q3)</sub>
 
