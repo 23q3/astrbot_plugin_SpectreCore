@@ -4,3 +4,4 @@ help: 自动检测群聊消息并让AI模型进行回复，让群聊更加生动
 version: v2.1.6 # 插件版本号。格式：v1.1.1 或者 v1.1
 author: 23q3 # 作者
 repo: https://github.com/23q3/astrbot_plugin_SpectreCore # 插件的仓库地址
+display_name: 🌟 SpectreCore
