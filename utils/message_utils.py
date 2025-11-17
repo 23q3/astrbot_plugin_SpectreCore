@@ -5,7 +5,8 @@ import time
 from datetime import datetime
 from .image_caption import ImageCaptionUtils
 import asyncio
-    
+import json
+import traceback
 
 
 class MessageUtils:
@@ -150,7 +151,6 @@ class MessageUtils:
                     data = getattr(i, 'data', None)
                     if isinstance(data, str):
                         try:
-                            import json
                             json_data = json.loads(data)
                             if "prompt" in json_data:
                                 outline += f"[JSON卡片:{json_data.get('prompt', '')}]"
@@ -158,7 +158,7 @@ class MessageUtils:
                                 outline += f"[小程序:{json_data.get('app', '')}]"
                             else:
                                 outline += "[JSON消息]"
-                        except:
+                        except (json.JSONDecodeError, ValueError, TypeError):
                             outline += "[JSON消息]"
                     else:
                         outline += "[JSON消息]"
@@ -169,20 +169,6 @@ class MessageUtils:
                     outline += f"[文件:{getattr(i, 'name', '')}]"
                 elif component_type == "wechatemoji" or isinstance(i, WechatEmoji):
                     outline += "[微信表情]"
-                elif component_type == "reply" or isinstance(i, Reply):
-                    # 回复处理逻辑
-                    if hasattr(i, 'chain') and i.chain:
-                        sender_info = f"{getattr(i, 'sender_nickname', '')}({getattr(i, 'sender_id', '')})" if hasattr(i, 'sender_nickname') and i.sender_nickname else f"{getattr(i, 'sender_id', '')}"
-                        reply_content = await MessageUtils.outline_message_list(i.chain)
-                        outline += f"[回复({sender_info}: {reply_content})]"
-                    elif hasattr(i, 'message_str') and i.message_str:
-                        sender_info = f"{getattr(i, 'sender_nickname', '')}({getattr(i, 'sender_id', '')})" if hasattr(i, 'sender_nickname') and i.sender_nickname else f"{getattr(i, 'sender_id', '')}"
-                        outline += f"[回复({sender_info}: {i.message_str})]"
-                    elif hasattr(i, 'sender_nickname') and i.sender_nickname or hasattr(i, 'sender_id') and i.sender_id:
-                        sender_info = f"{getattr(i, 'sender_nickname', '')}({getattr(i, 'sender_id', '')})" if hasattr(i, 'sender_nickname') and i.sender_nickname else f"{getattr(i, 'sender_id', '')}"
-                        outline += f"[回复({sender_info})]"
-                    else:
-                        outline += "[回复消息]"
                 else:
                     # 处理被移除的组件类型
                     if component_type == "anonymous":
