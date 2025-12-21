@@ -18,24 +18,24 @@ class MessageUtils:
     async def format_history_for_llm(history_messages: List[AstrBotMessage], max_messages: int = 20) -> str:
         """
         将历史消息列表格式化为适合输入给大模型的文本格式
-        
+
         Args:
             history_messages: 历史消息列表
             max_messages: 最大消息数量，默认20条
-            
+
         Returns:
             格式化后的历史消息文本
         """
         if not history_messages:
             return ""
-        
+
         # 限制消息数量
         if len(history_messages) > max_messages:
             history_messages = history_messages[-max_messages:]
-        
+
         formatted_text = ""
         divider = "\n" + "-" + "\n"
-        
+
         for idx, msg in enumerate(history_messages):
             # 获取发送者信息
             sender_name = "未知用户"
@@ -43,7 +43,7 @@ class MessageUtils:
             if hasattr(msg, "sender") and msg.sender:
                 sender_name = msg.sender.nickname or "未知用户"
                 sender_id = msg.sender.user_id or "unknown"
-            
+
             # 获取发送时间
             send_time = "未知时间"
             if hasattr(msg, "timestamp") and msg.timestamp:
@@ -52,23 +52,95 @@ class MessageUtils:
                     send_time = time_obj.strftime("%Y-%m-%d %H:%M:%S")
                 except:
                     pass
-            
+
             # 获取消息内容 (异步调用)
             message_content = await MessageUtils.outline_message_list(msg.message) if hasattr(msg, "message") and msg.message else ""
-            
+
             # 格式化该条消息
             message_text = f"发送者: {sender_name} (ID: {sender_id})\n"
             message_text += f"时间: {send_time}\n"
             message_text += f"内容: {message_content}"
-            
+
             # 添加到结果中
             formatted_text += message_text
-            
+
             # 除了最后一条消息，每条消息后添加分割线
             if idx < len(history_messages) - 1:
                 formatted_text += divider
-        
+
         return formatted_text
+
+    @staticmethod
+    async def format_history_to_contexts(history_messages: List[AstrBotMessage], max_messages: int = 20) -> List[Dict[str, str]]:
+        """
+        将历史消息列表转换为 OpenAI contexts 格式（符合标准 Chat Completion API）
+
+        Args:
+            history_messages: 历史消息列表
+            max_messages: 最大消息数量，默认20条
+
+        Returns:
+            OpenAI contexts 格式的列表，每个元素为 {"role": "user/assistant", "content": "..."}
+        """
+        if not history_messages:
+            return []
+
+        # 限制消息数量
+        if len(history_messages) > max_messages:
+            history_messages = history_messages[-max_messages:]
+
+        contexts = []
+
+        for msg in history_messages:
+            # 判断消息角色：检查是否为 bot 消息
+            is_bot_message = False
+            if hasattr(msg, "sender") and msg.sender:
+                sender_id = msg.sender.user_id
+                # 如果发送者ID为空或者标记为bot，认为是assistant消息
+                is_bot_message = not sender_id or getattr(msg, "_is_bot_message", False)
+
+            role = "assistant" if is_bot_message else "user"
+
+            # 获取消息内容
+            message_content = ""
+
+            # 获取发送者信息（仅用户消息需要）
+            if not is_bot_message:
+                sender_name = "未知用户"
+                sender_id = "unknown"
+                if hasattr(msg, "sender") and msg.sender:
+                    sender_name = msg.sender.nickname or "未知用户"
+                    sender_id = msg.sender.user_id or "unknown"
+
+                # 获取发送时间
+                send_time = ""
+                if hasattr(msg, "timestamp") and msg.timestamp:
+                    try:
+                        time_obj = datetime.fromtimestamp(msg.timestamp)
+                        send_time = time_obj.strftime("%Y-%m-%d %H:%M:%S")
+                    except:
+                        pass
+
+                # 格式化用户消息：包含发送者和时间信息
+                sender_info = f"[{sender_name} (ID: {sender_id})"
+                if send_time:
+                    sender_info += f" {send_time}"
+                sender_info += "]: "
+
+                # 获取消息文本内容
+                text_content = await MessageUtils.outline_message_list(msg.message) if hasattr(msg, "message") and msg.message else ""
+                message_content = sender_info + text_content
+            else:
+                # Bot 消息只需要文本内容
+                message_content = await MessageUtils.outline_message_list(msg.message) if hasattr(msg, "message") and msg.message else ""
+
+            # 添加到 contexts
+            contexts.append({
+                "role": role,
+                "content": message_content
+            })
+
+        return contexts
            
     @staticmethod
     async def outline_message_list(message_list: List[BaseMessageComponent]) -> str:

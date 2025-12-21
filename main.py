@@ -74,7 +74,94 @@ class SpectreCore(Star):
         except Exception as e:
             logger.error(f"处理bot发送的消息时发生错误: {e}")
 
-    from astrbot.api.provider import LLMResponse
+    from astrbot.api.provider import LLMResponse, ProviderRequest
+
+    @filter.on_llm_request()
+    async def on_llm_request(self, event: AstrMessageEvent, req: ProviderRequest):
+        """在 LLM 请求前注入环境描述和聊天历史喵"""
+        try:
+            # 检查是否是 SpectreCore 触发的请求
+            if not event.get_extra("_spectrecore_request"):
+                return
+
+            logger.debug("SpectreCore: 开始注入环境描述和聊天历史")
+
+            platform_name = event.get_platform_name()
+            is_private = event.is_private_chat()
+            chat_id = event.get_group_id() if not is_private else event.get_sender_id()
+
+            # 1. 构建环境描述并注入到 system_prompt
+            env_description = f"\n\n你正在浏览聊天软件，你在聊天软件上的id是{event.get_self_id()}"
+
+            # 获取机器人用户名（仅 aiocqhttp 平台）
+            if platform_name == "aiocqhttp" and hasattr(event, "bot"):
+                try:
+                    bot_name = (await event.bot.api.get_login_info())["nickname"]
+                    env_description += f"，用户名是{bot_name}"
+                except Exception as e:
+                    logger.warning(f"通过 event.bot 获取机器人昵称失败: {e}")
+
+            # 添加聊天环境信息
+            if is_private:
+                sender_display_name = event.get_sender_name() if event.get_sender_name() else f"ID为 {event.get_sender_id()} 的人"
+                env_description += f"，你正在和 {sender_display_name} 私聊页面中。"
+            else:
+                group_display_name = chat_id
+                # 尝试获取群名
+                if platform_name in ["aiocqhttp", "gewechat"]:
+                    try:
+                        group = await event.get_group()
+                        if group and group.group_name:
+                            group_display_name = f"{group.group_name}({chat_id})"
+                    except Exception as e:
+                        logger.warning(f"为 {platform_name} 获取群组信息失败: {e}")
+                env_description += f"，你正在群聊 {group_display_name} 中。"
+
+            # 添加行为指引
+            env_description += "\n(在聊天记录中，你的用户名以AstrBot被代替了)"
+            env_description += "\n(如果你想回复某人，不要使用类似 [At:id(昵称)]这样的格式)"
+
+            # 判断是否开启读空气
+            if self.config.get("read_air", False):
+                env_description += "\n\n如果你想发送一条消息，直接输出发送的内容。如果你选择忽略，直接输出<NO_RESPONSE>"
+
+            # 注入到 system_prompt
+            if not req.system_prompt:
+                req.system_prompt = ""
+            req.system_prompt += env_description
+
+            # 2. 获取历史记录并转换为 contexts 格式
+            try:
+                history_limit = self.config.get("group_msg_history", 10)
+                history_messages = HistoryStorage.get_history(platform_name, is_private, chat_id)
+
+                if history_messages:
+                    # 转换为 OpenAI contexts 格式
+                    history_contexts = await MessageUtils.format_history_to_contexts(
+                        history_messages,
+                        max_messages=history_limit
+                    )
+
+                    if history_contexts:
+                        # 确保 req.contexts 存在
+                        if not req.contexts:
+                            req.contexts = []
+
+                        # 将历史记录追加到 contexts
+                        req.contexts.extend(history_contexts)
+
+                        logger.debug(f"SpectreCore: 已注入 {len(history_contexts)} 条历史记录到 contexts")
+                else:
+                    logger.debug("SpectreCore: 没有找到历史记录")
+
+            except Exception as e:
+                logger.error(f"获取或格式化历史记录失败: {e}")
+
+            logger.debug(f"SpectreCore: 注入完成 - system_prompt 长度: {len(req.system_prompt)}, contexts 数量: {len(req.contexts) if req.contexts else 0}")
+
+        except Exception as e:
+            logger.error(f"在 LLM 请求前注入信息时发生错误: {e}")
+
     @filter.on_llm_response(priority=114514)
     async def on_llm_resp(self, event: AstrMessageEvent, resp: LLMResponse):
         """处理大模型回复喵"""
