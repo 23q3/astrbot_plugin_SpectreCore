@@ -66,7 +66,7 @@ SpectreCore (影芯) 是一个为 AstrBot 设计的高级群聊互动插件，�
 - [指令说明](./docs/commands.md) - 详细的指令用法和参数说明
 - [使用技巧](./docs/tips.md) - 提高插件使用效果的技巧和建议
 - [项目结构](./docs/structure.md) - 项目代码结构和核心文件说明
-- [更新日志](./CHANGELOG.md) - 项目版本历史和功能变化
+- [更新日志](https://github.com/23q3/astrbot_plugin_SpectreCore/releases) - 项目版本历史和功能变化
 
 ## 📋 最新版本
 
@@ -77,8 +77,6 @@ SpectreCore (影芯) 是一个为 AstrBot 设计的高级群聊互动插件，�
 - ⚡ **优化引用消息显示** - 改进 Reply 组件处理，提供更完整的发送者信息和内容
 - ⚡ **优化@消息处理** - 重构 'at' 和 'atall' 组件处理逻辑，提高代码清晰度和功能性
 - [#72](https://github.com/23q3/astrbot_plugin_SpectreCore/issues/72) [#73](https://github.com/23q3/astrbot_plugin_SpectreCore/pull/73) @Hola-Gracias
-
-查看完整的[更新日志](./CHANGELOG.md)，了解项目的版本历史和功能变化。
 
 ## ⚠️ 注意事项
 
