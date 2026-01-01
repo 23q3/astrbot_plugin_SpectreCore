@@ -4,7 +4,7 @@
 
 ![SpectreCore](https://avatars.githubusercontent.com/u/129108081?s=48&v=4)
 
-[![version](https://img.shields.io/badge/version-v2.1.7-blue.svg?style=flat-square)](https://github.com/23q3/astrbot_plugin_SpectreCore)
+[![version](https://img.shields.io/badge/version-v2.1.8?style=flat-square)](https://github.com/23q3/astrbot_plugin_SpectreCore)
 [![license](https://img.shields.io/badge/license-AGPL--3.0-green.svg?style=flat-square)](LICENSE)
 [![author](https://img.shields.io/badge/author-23q3-orange.svg?style=flat-square)](https://github.com/23q3)
 
@@ -70,13 +70,9 @@ SpectreCore (影芯) 是一个为 AstrBot 设计的高级群聊互动插件，�
 
 ## 📋 最新版本
 
-### v2.1.7 (2025-11-17)
+### v2.1.8 (2026-01-01)
 
-- 🐛 **修复AstrBot兼容性问题** - 移除对不存在的 `Anonymous` 等消息组件类的依赖，使用类型字符串检查替代类实例检查，兼容 AstrBot 新版本
-- ⚡ **优化私聊回复机制** - 将私聊回复概率固定为1，确保历史消息格式统一
-- ⚡ **优化引用消息显示** - 改进 Reply 组件处理，提供更完整的发送者信息和内容
-- ⚡ **优化@消息处理** - 重构 'at' 和 'atall' 组件处理逻辑，提高代码清晰度和功能性
-- [#72](https://github.com/23q3/astrbot_plugin_SpectreCore/issues/72) [#73](https://github.com/23q3/astrbot_plugin_SpectreCore/pull/73) @Hola-Gracias
+- 🧪 **测试自动化流程** - 验证 workflow 正常工作
 
 ## ⚠️ 注意事项
 
