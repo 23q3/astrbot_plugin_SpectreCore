@@ -37,7 +37,8 @@ class PersonaUtils:
             默认人格的ID，如果获取失败则返回None
         """
         try:
-            return context.provider_manager.selected_default_persona["name"]
+            persona = context.persona_manager.selected_default_persona_v3
+            return persona["name"] if persona else None
         except Exception as e:
             logger.error(f"获取默认人格失败: {e}")
             return None

@@ -4,7 +4,7 @@
 
 ![SpectreCore](https://avatars.githubusercontent.com/u/129108081?s=48&v=4)
 
-[![version](https://img.shields.io/badge/version-v2.1.7-blue.svg?style=flat-square)](https://github.com/23q3/astrbot_plugin_SpectreCore)
+[![version](https://img.shields.io/badge/version-v2.1.8-blue.svg?style=flat-square)](https://github.com/23q3/astrbot_plugin_SpectreCore)
 [![license](https://img.shields.io/badge/license-AGPL--3.0-green.svg?style=flat-square)](LICENSE)
 [![author](https://img.shields.io/badge/author-23q3-orange.svg?style=flat-square)](https://github.com/23q3)
 
@@ -70,15 +70,11 @@ SpectreCore (影芯) 是一个为 AstrBot 设计的高级群聊互动插件，�
 
 ## 📋 最新版本
 
-### v2.1.7 (2025-11-17)
+### v2.1.8 (2026-01-02)
 
-- 🐛 **修复AstrBot兼容性问题** - 移除对不存在的 `Anonymous` 等消息组件类的依赖，使用类型字符串检查替代类实例检查，兼容 AstrBot 新版本
-- ⚡ **优化私聊回复机制** - 将私聊回复概率固定为1，确保历史消息格式统一
-- ⚡ **优化引用消息显示** - 改进 Reply 组件处理，提供更完整的发送者信息和内容
-- ⚡ **优化@消息处理** - 重构 'at' 和 'atall' 组件处理逻辑，提高代码清晰度和功能性
-- [#72](https://github.com/23q3/astrbot_plugin_SpectreCore/issues/72) [#73](https://github.com/23q3/astrbot_plugin_SpectreCore/pull/73) @Hola-Gracias
-
-查看完整的[更新日志](./CHANGELOG.md)，了解项目的版本历史和功能变化。
+- ⚡ **优化LLM调用的prompt结构** - 将环境信息移至system_prompt，保持prompt干净以支持知识库检索；基于message_id精确排除当前消息避免历史记录重复 [#76](https://github.com/23q3/astrbot_plugin_SpectreCore/pull/76)
+- 🐛 **修复QQ官方平台help命令** - 检测到QQ官方平台时不输出GitHub链接，避免消息被拦截 [#78](https://github.com/23q3/astrbot_plugin_SpectreCore/issues/78)
+- 🐛 **适配AstrBot新版本API** - 移除对已删除属性的依赖，迁移至新版人格管理接口，增强图片URL提取兼容性
 
 ## ⚠️ 注意事项
 

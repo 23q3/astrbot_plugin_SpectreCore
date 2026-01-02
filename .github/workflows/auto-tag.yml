@@ -1,0 +1,110 @@
+name: Auto Tag and Release on Merge
+
+on:
+  pull_request:
+    types:
+      - closed
+    branches:
+      - main
+
+jobs:
+  create-tag-and-release:
+    # 只在 PR 被合并且带有 release 标签时执行
+    if: github.event.pull_request.merged == true && contains(github.event.pull_request.labels.*.name, 'release')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.merge_commit_sha }}
+
+      - name: Extract version from metadata.yaml
+        id: version
+        run: |
+          # 从 metadata.yaml 读取版本号，移除注释和空白
+          VERSION=$(grep '^version:' metadata.yaml | sed 's/version: *//' | sed 's/ *#.*//' | tr -d ' ')
+
+          if [ -z "$VERSION" ]; then
+            echo "Could not extract version from metadata.yaml"
+            exit 1
+          fi
+
+          # 确保版本号以 v 开头
+          if [[ "$VERSION" != v* ]]; then
+            VERSION="v$VERSION"
+          fi
+
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Extracted version: $VERSION"
+
+      - name: Check if tag already exists
+        id: check_tag
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          git fetch --tags
+
+          if git tag -l "$VERSION" | grep -q .; then
+            echo "Tag $VERSION already exists, skipping"
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "Tag $VERSION does not exist, will create"
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Create and push tag
+        if: steps.check_tag.outputs.exists == 'false'
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git tag -a "$VERSION" -m "Release $VERSION"
+          git push origin "$VERSION"
+
+          echo "Created and pushed tag $VERSION"
+
+      - name: Get changelog content
+        if: steps.check_tag.outputs.exists == 'false'
+        id: changelog
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          CHANGELOG_FILE="changelogs/${VERSION}.md"
+
+          if [ -f "$CHANGELOG_FILE" ]; then
+            echo "Found changelog file: $CHANGELOG_FILE"
+            echo "changelog_file=$CHANGELOG_FILE" >> "$GITHUB_OUTPUT"
+          else
+            echo "Changelog file not found: $CHANGELOG_FILE"
+            echo "Auto-generated release for $VERSION" > /tmp/release_body.md
+            echo "changelog_file=/tmp/release_body.md" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Determine if prerelease
+        if: steps.check_tag.outputs.exists == 'false'
+        id: prerelease
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+
+          if [[ "$VERSION" == *-* ]]; then
+            echo "is_prerelease=true" >> "$GITHUB_OUTPUT"
+            echo "Version $VERSION is a prerelease"
+          else
+            echo "is_prerelease=false" >> "$GITHUB_OUTPUT"
+            echo "Version $VERSION is a stable release"
+          fi
+
+      - name: Create GitHub Release
+        if: steps.check_tag.outputs.exists == 'false'
+        uses: ncipollo/release-action@v1
+        with:
+          tag: ${{ steps.version.outputs.version }}
+          name: ${{ steps.version.outputs.version }}
+          bodyFile: ${{ steps.changelog.outputs.changelog_file }}
+          generateReleaseNotes: true
+          prerelease: ${{ steps.prerelease.outputs.is_prerelease }}
+          token: ${{ secrets.GITHUB_TOKEN }}
