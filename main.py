@@ -120,17 +120,21 @@ class SpectreCore(Star):
     @spectrecore.command("help", alias=['帮助', 'helpme'])
     async def help(self, event: AstrMessageEvent):
         """查看插件的帮助喵"""
-        yield event.plain_result(
+        help_text = (
             "SpectreCore插件帮助文档\n"
             "使用spectrecore或sc作为指令前缀 如/sc help\n"
             "使用reset指令重置当前聊天记录 如/sc reset\n"
             "   你也可以重置指定群聊天记录 如/sc reset 群号\n"
             "使用history指令可以查看最近聊天记录 如/sc history\n"
             "使用mute/闭嘴指令临时禁用自动回复 如/sc mute 5 或 /sc 闭嘴 10\n"
-            "使用unmute/说话指令解除禁用 如/sc unmute 或 /sc 说话\n"
-            "↓强烈建议您阅读Github中的README文档\n↓"
-            "https://github.com/23q3/astrbot_plugin_SpectreCore"
+            "使用unmute/说话指令解除禁用 如/sc unmute 或 /sc 说话"
         )
+        platform_name = event.get_platform_name()
+        if platform_name in ("qq_official", "qq_official_webhook"):
+            help_text += "\n强烈建议前往Github阅读README文档"
+        else:
+            help_text += "\n↓强烈建议您阅读Github中的README文档↓\nhttps://github.com/23q3/astrbot_plugin_SpectreCore"
+        yield event.plain_result(help_text)
     @filter.permission_type(filter.PermissionType.ADMIN)
     @spectrecore.command("history")
     async def history(self, event: AstrMessageEvent, count: int = 10):
