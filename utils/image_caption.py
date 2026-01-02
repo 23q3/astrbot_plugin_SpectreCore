@@ -5,15 +5,15 @@ import asyncio
 class ImageCaptionUtils:
     """
     图片转述工具类
-    
+
     用于调用大语言模型将图片转述为文本描述
     """
-    
+
     # 保存context和config对象的静态变量
-    context = None
-    config = None
+    context: Optional[Context] = None
+    config: Optional[AstrBotConfig] = None
     # 图片描述缓存
-    caption_cache = {}
+    caption_cache: dict[str, str] = {}
     
     @staticmethod
     def init(context: Context, config: AstrBotConfig):
@@ -44,6 +44,11 @@ class ImageCaptionUtils:
         # 获取配置
         config = ImageCaptionUtils.config
         context = ImageCaptionUtils.context
+
+        if not config or not context:
+            logger.warning("ImageCaptionUtils 未初始化")
+            return None
+
         # 检查是否已启用图片转述
         image_processing_config = config.get("image_processing", {})
         if not image_processing_config.get("use_image_caption", False):
@@ -55,20 +60,21 @@ class ImageCaptionUtils:
             provider = context.get_using_provider()
         else:
             provider = context.get_provider_by_id(provider_id)
-        
-        if not provider:
+
+        if not provider or not hasattr(provider, "text_chat"):
              logger.warning(f"无法找到提供商: {provider_id if provider_id else '默认'}")
              return None
 
+        text_chat = getattr(provider, "text_chat")
         try:
             # 带超时控制的调用大模型进行图片转述
             async def call_llm():
-                return await provider.text_chat(
+                return await text_chat(
                     prompt=image_processing_config.get("image_caption_prompt", "请直接简短描述这张图片"),
-                    contexts=[], 
-                    image_urls=[image], # 图片链接，支持路径和网络链接
-                    func_tool=None, # 当前用户启用的函数调用工具。如果不需要，可以不传
-                    system_prompt=""  # 系统提示，可以不传
+                    contexts=[],
+                    image_urls=[image],
+                    func_tool=None,
+                    system_prompt=""
                 )
             
             # 使用asyncio.wait_for添加超时控制

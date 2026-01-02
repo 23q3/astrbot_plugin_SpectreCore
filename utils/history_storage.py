@@ -75,26 +75,23 @@ class HistoryStorage:
         return sanitized_message
     
     @staticmethod
-    async def save_message(message: AstrBotMessage) -> bool:
+    async def save_message(message: AstrBotMessage, platform_name: str) -> bool:
         """
         保存消息到历史记录
-        
+
         Args:
             message: AstrBot消息对象
-            
+            platform_name: 平台名称
+
         Returns:
             是否保存成功
         """
         try:
             # 判断是群聊还是私聊
             is_private_chat = not bool(message.group_id)
-            platform_name = message.platform_name if hasattr(message, "platform_name") else "unknown"
             
             if is_private_chat:
-                if hasattr(message, "private_id") and message.private_id:
-                    chat_id = message.private_id
-                else:
-                    chat_id = message.sender.user_id
+                chat_id = message.sender.user_id
             else:
                 chat_id = message.group_id
                 
@@ -180,10 +177,9 @@ class HistoryStorage:
             
         # 创建消息对象
         message_obj = event.message_obj
-        message_obj.platform_name = event.get_platform_name()
-                
+
         # 保存消息
-        success = await HistoryStorage.save_message(message_obj)
+        success = await HistoryStorage.save_message(message_obj, event.get_platform_name())
         
         chat_type = "私聊" if event.is_private_chat() else "群聊"
         if success:
@@ -205,10 +201,9 @@ class HistoryStorage:
         """
         # 创建消息对象
         msg = AstrBotMessage()
-        
+
         # 设置基本属性
         msg.message = chain
-        msg.platform_name = event.get_platform_name()
         msg.timestamp = int(time.time())
         
         # 设置消息类型和会话信息
@@ -217,12 +212,9 @@ class HistoryStorage:
         if not is_private:
             msg.group_id = event.get_group_id()
         
-        # 设置发送者信息        
+        # 设置发送者信息
         msg.sender = MessageMember(user_id=event.get_self_id(), nickname="AstrBot")
 
-        # 设置对方的id
-        msg.private_id = event.get_sender_id()
-        
         # 生成纯文本消息
         msg.message_str = ""
         for comp in chain:
@@ -256,9 +248,9 @@ class HistoryStorage:
                 
             # 创建机器人消息对象
             bot_msg = HistoryStorage.create_bot_message(chain, event)
-            
+
             # 保存消息
-            return await HistoryStorage.save_message(bot_msg)
+            return await HistoryStorage.save_message(bot_msg, event.get_platform_name())
         except Exception as e:
             logger.error(f"保存机器人消息失败: {e}")
             return False

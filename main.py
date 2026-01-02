@@ -189,7 +189,7 @@ class SpectreCore(Star):
             yield event.plain_result(f"获取历史记录失败喵：{str(e)}")
     @filter.permission_type(filter.PermissionType.ADMIN)
     @spectrecore.command("reset")
-    async def reset(self, event: AstrMessageEvent, group_id: str = None):
+    async def reset(self, event: AstrMessageEvent, group_id: str | None = None):
         """重置历史记录喵，不带参数重置当前聊天记录，带群号则重置指定群聊记录 如/sc reset 123456"""
         try:
             # 获取平台名称

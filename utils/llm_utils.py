@@ -146,7 +146,8 @@ class LLMUtils:
         # 对于aiocqhttp平台，尝试获取bot用户名
         if platform_name == "aiocqhttp" and hasattr(event, "bot"):
             try:
-                bot_name = (await event.bot.api.get_login_info())["nickname"]
+                bot = getattr(event, "bot")
+                bot_name = (await bot.api.get_login_info())["nickname"]
                 env_description += f"，用户名是{bot_name}"
             except Exception as e:
                 logger.warning(f"通过 event.bot 获取机器人昵称失败: {e}")
@@ -213,8 +214,9 @@ class LLMUtils:
                         for component in message.message:
                             if isinstance(component, Image):
                                 try:
-                                    if component.file:
-                                        image_urls.append(component.file)
+                                    url = component.url or component.file
+                                    if url:
+                                        image_urls.append(url)
                                         if len(image_urls) >= image_count:
                                             break
                                 except Exception as e:
