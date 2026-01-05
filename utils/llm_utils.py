@@ -214,7 +214,7 @@ class LLMUtils:
                         for component in message.message:
                             if isinstance(component, Image):
                                 try:
-                                    url = component.url or component.file
+                                    url = component.file or component.url
                                     if url:
                                         image_urls.append(url)
                                         if len(image_urls) >= image_count:
