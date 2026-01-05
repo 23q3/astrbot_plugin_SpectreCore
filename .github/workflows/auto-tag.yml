@@ -108,3 +108,11 @@ jobs:
           generateReleaseNotes: true
           prerelease: ${{ steps.prerelease.outputs.is_prerelease }}
           token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Sync dev branch with main
+        run: |
+          git fetch origin
+          git checkout dev
+          git merge origin/main --ff-only
+          git push origin dev
+          echo "Synced dev branch with main"

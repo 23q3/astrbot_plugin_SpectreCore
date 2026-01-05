@@ -4,7 +4,7 @@
 
 ![SpectreCore](https://avatars.githubusercontent.com/u/129108081?s=48&v=4)
 
-[![version](https://img.shields.io/badge/version-v2.1.8-blue.svg?style=flat-square)](https://github.com/23q3/astrbot_plugin_SpectreCore)
+[![version](https://img.shields.io/badge/version-v2.1.9-blue.svg?style=flat-square)](https://github.com/23q3/astrbot_plugin_SpectreCore)
 [![license](https://img.shields.io/badge/license-AGPL--3.0-green.svg?style=flat-square)](LICENSE)
 [![author](https://img.shields.io/badge/author-23q3-orange.svg?style=flat-square)](https://github.com/23q3)
 
@@ -70,11 +70,9 @@ SpectreCore (影芯) 是一个为 AstrBot 设计的高级群聊互动插件，�
 
 ## 📋 最新版本
 
-### v2.1.8 (2026-01-02)
+### v2.1.9 (2026-01-05)
 
-- ⚡ **优化LLM调用的prompt结构** - 将环境信息移至system_prompt，保持prompt干净以支持知识库检索；基于message_id精确排除当前消息避免历史记录重复 [#76](https://github.com/23q3/astrbot_plugin_SpectreCore/pull/76)
-- 🐛 **修复QQ官方平台help命令** - 检测到QQ官方平台时不输出GitHub链接，避免消息被拦截 [#78](https://github.com/23q3/astrbot_plugin_SpectreCore/issues/78)
-- 🐛 **适配AstrBot新版本API** - 移除对已删除属性的依赖，迁移至新版人格管理接口，增强图片URL提取兼容性
+- 🐛 **修复GIF图片格式识别错误** - 修复图片URL优先级问题，优先使用file字段以保留准确格式信息，避免HTTP URL下载后MIME类型检测错误导致Gemini API返回400 [#81](https://github.com/23q3/astrbot_plugin_SpectreCore/issues/81)
 
 ## ⚠️ 注意事项
 
