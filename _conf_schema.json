@@ -5,10 +5,24 @@
         "hint": "决定了会输入给大模型多少条q群历史消息(最多200条)",
         "default": 20
     },
+    "enable_all_groups": {
+        "description": "回复所有群聊",
+        "type": "bool",
+        "hint": "开启后将回复所有群聊（黑名单中的群除外）。关闭则只回复白名单中的群。",
+        "default": false
+    },
     "enabled_groups": {
         "description": "启用回复功能的群聊列表",
         "type": "list",
+        "items": {"type": "string"},
         "hint": "只有在这个列表中的群聊才会启用回复功能，如果为空则不启用回复功能",
+        "default": []
+    },
+    "blocked_groups": {
+        "description": "黑名单群组列表",
+        "type": "list",
+        "items": {"type": "string"},
+        "hint": "列表中的群聊将不会回复，优先级高于白名单和全局开关。",
         "default": []
     },
     "enabled_private": {
