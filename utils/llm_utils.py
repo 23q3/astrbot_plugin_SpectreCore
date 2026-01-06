@@ -228,8 +228,11 @@ class LLMUtils:
                 if image_urls:
                     system_prompt += f"\n\n已经按照从晚到早的顺序为你提供了聊天记录中的{len(image_urls)}张图片，你可以直接查看并理解它们。这些图片出现在聊天记录中。"
 
-        # prompt 只保留用户当前消息，保持干净供 KB 检索
-        prompt = event.get_message_outline()
+        # prompt 只保留用户当前消息，使用 MessageUtils 确保图片被转述
+        if hasattr(event, "message_obj") and hasattr(event.message_obj, "message"):
+            prompt = await MessageUtils.outline_message_list(event.message_obj.message)
+        else:
+            prompt = event.get_message_outline()
 
         return event.request_llm(
             prompt=prompt,
