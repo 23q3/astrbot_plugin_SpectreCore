@@ -37,12 +37,6 @@
         "hint": "是否过滤大模型回复中被<think></think>标签包裹的思考内容",
         "default": true
     },
-    "persona":{
-        "description":"使用的人格",
-        "type":"string",
-        "hint":"填写人格名称,如果为空则不使用人格",
-        "default":""
-    },
     "read_air":{
         "description":"是否开启读空气",
         "type":"bool",
