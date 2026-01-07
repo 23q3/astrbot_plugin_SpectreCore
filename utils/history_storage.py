@@ -158,7 +158,20 @@ class HistoryStorage:
             return HistoryStorage.config.get("enabled_private", False)
         else:
             group_id = event.get_group_id()
-            return group_id in HistoryStorage.config.get("enabled_groups", [])
+            if not group_id:
+                return False
+            group_id = str(group_id).strip()
+            
+            # 获取配置集合并规范化 (O(1) 查找)
+            blocked_groups = {str(g).strip() for g in HistoryStorage.config.get("blocked_groups", []) if str(g).strip()}
+            enabled_groups = {str(g).strip() for g in HistoryStorage.config.get("enabled_groups", []) if str(g).strip()}
+
+            # 优先级: 黑名单 > 全局开关 > 白名单
+            if group_id in blocked_groups:
+                return False
+            if HistoryStorage.config.get("enable_all_groups", False):
+                return True
+            return group_id in enabled_groups
     
     @staticmethod
     async def process_and_save_user_message(event: AstrMessageEvent) -> None:

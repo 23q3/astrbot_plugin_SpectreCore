@@ -167,7 +167,7 @@ jobs:
 
           echo "Updated README.md latest version section"
 
-      - name: Commit changes
+      - name: Commit changes (amend to changelog commit)
         run: |
           VERSION="${{ steps.version.outputs.version }}"
 
@@ -182,10 +182,11 @@ jobs:
             exit 0
           fi
 
-          git commit -m "chore: bump version to $VERSION"
-          git push origin HEAD:dev
+          # 将 bump version 变更合并到 changelog 提交中
+          git commit --amend -m "release: $VERSION"
+          git push origin HEAD:dev --force-with-lease
 
-          echo "Committed and pushed changes"
+          echo "Amended changelog commit with version bump"
 
       - name: Create Pull Request
         env:

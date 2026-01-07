@@ -5,7 +5,6 @@ import threading
 from .history_storage import HistoryStorage
 from .message_utils import MessageUtils
 from astrbot.core.provider.entites import ProviderRequest
-from .persona_utils import PersonaUtils
 
 class LLMUtils:
     """
@@ -116,29 +115,66 @@ class LLMUtils:
         # 准备并调用大模型
         func_tools_mgr = context.get_llm_tool_manager() if config.get("use_func_tool", False) else None
 
-        # 获取配置中指定的人格
+        # 使用 AstrBot 原生 UMO 人格机制获取人格
         system_prompt = ""
         contexts = []
-        persona_name = config.get("persona", "")
+        umo = event.unified_msg_origin
 
-        if persona_name:
+        try:
+            # 遵循 AstrBot 原生人格获取优先级：
+            # 1. session_service_config.persona_id (会话级别配置)
+            # 2. 配置文件的 default_personality
+            # 3. 全局默认人格
+
+            persona_id = None
+            persona = None
+
+            # 优先级1: 查询会话级别的人格配置 (通过全局 SharedPreferences)
             try:
-                persona = PersonaUtils.get_persona_by_name(context, persona_name)
-                if persona:
-                    system_prompt = persona.get('prompt', '')
-                    if persona.get('_mood_imitation_dialogs_processed'):
-                        mood_dialogs = persona.get('_mood_imitation_dialogs_processed', [])
-                        system_prompt += "\n请模仿以下示例的对话风格来反应(示例中，a代表用户，b代表你)\n" + mood_dialogs
-
-                    begin_dialogs = persona.get('_begin_dialogs_processed', [])
-                    if begin_dialogs:
-                        contexts.extend(begin_dialogs)
-
-                    logger.debug(f"找到人格 '{persona_name}' ")
-                else:
-                    logger.warning(f"未找到名为 '{persona_name}' 的人格")
+                from astrbot.api import sp
+                session_config = await sp.get_async(
+                    scope="umo", scope_id=umo, key="session_service_config", default={}
+                )
+                persona_id = session_config.get("persona_id")
+                if persona_id:
+                    logger.debug(f"从 session_service_config 获取人格: '{persona_id}'")
             except Exception as e:
-                logger.error(f"获取人格信息失败: {e}")
+                logger.debug(f"获取 session_service_config 失败: {e}")
+
+            # 优先级2/3: 使用 get_default_persona_v3 获取配置文件或全局默认人格
+            if not persona_id:
+                if hasattr(context, 'persona_manager') and hasattr(context.persona_manager, 'get_default_persona_v3'):
+                    persona = await context.persona_manager.get_default_persona_v3(umo=umo)
+                    persona_id = persona.get('name') if persona else None
+                else:
+                    # Fallback: 旧版 AstrBot 兼容
+                    persona = context.persona_manager.selected_default_persona_v3 if hasattr(context, 'persona_manager') else None
+                    persona_id = persona.get('name') if persona else None
+
+            # 根据 persona_id 获取完整的人格数据
+            if persona_id and not persona:
+                try:
+                    persona = next(
+                        (p for p in context.persona_manager.personas_v3 if p["name"] == persona_id),
+                        None
+                    )
+                except Exception:
+                    pass
+
+            if persona:
+                system_prompt = persona.get('prompt', '')
+                if persona.get('_mood_imitation_dialogs_processed'):
+                    mood_dialogs = persona.get('_mood_imitation_dialogs_processed', '')
+                    if mood_dialogs:
+                        system_prompt += "\n请模仿以下示例的对话风格来反应(示例中，a代表用户，b代表你)\n" + str(mood_dialogs)
+
+                begin_dialogs = persona.get('_begin_dialogs_processed', [])
+                if begin_dialogs:
+                    contexts.extend(begin_dialogs)
+
+                logger.debug(f"使用 UMO '{umo}' 对应的人格: '{persona.get('name', 'default')}'")
+        except Exception as e:
+            logger.error(f"获取人格信息失败: {e}")
 
         # 构建环境描述（注入到 system_prompt，不污染 prompt）
         env_description = f"\n\n你正在浏览聊天软件，你在聊天软件上的id是{event.get_self_id()}"
@@ -181,7 +217,7 @@ class LLMUtils:
                     # 回退到排除最后一条
                     history_for_context = history_messages[:-1] if len(history_messages) > 1 else []
                 if history_for_context:
-                    formatted_history = await MessageUtils.format_history_for_llm(history_for_context, max_messages=history_limit)
+                    formatted_history = await MessageUtils.format_history_for_llm(history_for_context, max_messages=history_limit, umo=umo)
                     env_description += "\n\n以下是最近的聊天记录：\n" + formatted_history
                 else:
                     env_description += "\n\n你没看见任何聊天记录，看来最近没有消息。"
@@ -228,8 +264,11 @@ class LLMUtils:
                 if image_urls:
                     system_prompt += f"\n\n已经按照从晚到早的顺序为你提供了聊天记录中的{len(image_urls)}张图片，你可以直接查看并理解它们。这些图片出现在聊天记录中。"
 
-        # prompt 只保留用户当前消息，保持干净供 KB 检索
-        prompt = event.get_message_outline()
+        # prompt 只保留用户当前消息，使用 MessageUtils 确保图片被转述
+        if hasattr(event, "message_obj") and hasattr(event.message_obj, "message"):
+            prompt = await MessageUtils.outline_message_list(event.message_obj.message, umo=umo)
+        else:
+            prompt = event.get_message_outline()
 
         return event.request_llm(
             prompt=prompt,

@@ -7,7 +7,7 @@ import time
     "spectrecore",
     "23q3",
     "使大模型更好的主动回复群聊中的消息，带来生动和沉浸的群聊对话体验",
-    "2.1.9",
+    "2.1.10",
     "https://github.com/23q3/astrbot_plugin_SpectreCore"
 )
 class SpectreCore(Star):
@@ -167,8 +167,8 @@ class SpectreCore(Star):
             # 只取最近的记录
             recent_history = history[-count:] if len(history) > count else history
             
-            # 格式化历史记录 
-            formatted_history = await MessageUtils.format_history_for_llm(recent_history)
+            # 格式化历史记录
+            formatted_history = await MessageUtils.format_history_for_llm(recent_history, umo=event.unified_msg_origin)
             
             # 添加标题
             chat_type = "私聊" if is_private else f"群聊({chat_id})"

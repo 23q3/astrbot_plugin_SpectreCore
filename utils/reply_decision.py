@@ -69,8 +69,28 @@ class ReplyDecision:
                 logger.debug("未开启私聊回复功能")
                 return False
         else:
-            if event.get_group_id() not in config.get("enabled_groups", []):
-                logger.debug(f"群聊{event.get_group_id()}未开启回复功能")
+            group_id = event.get_group_id()
+            if not group_id:
+                logger.debug("群聊ID为空，不进行回复")
+                return False
+            group_id = str(group_id).strip()
+
+            # 获取配置集合并规范化类型 (O(1) 查找)
+            blocked_groups = {str(g).strip() for g in config.get("blocked_groups", []) if str(g).strip()}
+            enabled_groups = {str(g).strip() for g in config.get("enabled_groups", []) if str(g).strip()}
+
+            # 1. 黑名单检查 - 最高优先级
+            if group_id in blocked_groups:
+                logger.debug(f"群聊{group_id}在黑名单中，不进行回复")
+                return False
+
+            # 2. 全局开关检查
+            if config.get("enable_all_groups", False):
+                logger.debug(f"全局群聊回复已开启，允许回复群聊{group_id}")
+                # 继续执行下面的频率检查
+            elif group_id not in enabled_groups:
+                # 3. 白名单检查 (仅在全局开关关闭时)
+                logger.debug(f"群聊{group_id}未在白名单中，不进行回复")
                 return False
             
         # 获取消息频率配置

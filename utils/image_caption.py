@@ -24,15 +24,17 @@ class ImageCaptionUtils:
     @staticmethod
     async def generate_image_caption(
             image: str, # 图片的base64编码或URL
+            umo: Optional[str] = None, # unified_msg_origin，用于 UMO 路由
             timeout: int = 30
         ) -> Optional[str]:
         """
         为单张图片生成文字描述
-        
+
         Args:
             image: 图片的base64编码或URL
+            umo: unified_msg_origin，用于获取对应 UMO 的 provider
             timeout: 超时时间（秒）
-            
+
         Returns:
             生成的图片描述文本，如果失败则返回None
         """
@@ -55,9 +57,9 @@ class ImageCaptionUtils:
             return None
 
         provider_id = image_processing_config.get("image_caption_provider_id", "")
-        # 获取提供商
+        # 获取提供商，支持 UMO 路由
         if provider_id == "":
-            provider = context.get_using_provider()
+            provider = context.get_using_provider(umo=umo)
         else:
             provider = context.get_provider_by_id(provider_id)
 
