@@ -75,13 +75,14 @@ class HistoryStorage:
         return sanitized_message
     
     @staticmethod
-    async def save_message(message: AstrBotMessage, platform_name: str) -> bool:
+    async def save_message(message: AstrBotMessage, platform_name: str, chat_id_override: str | None = None) -> bool:
         """
         保存消息到历史记录
 
         Args:
             message: AstrBot消息对象
             platform_name: 平台名称
+            chat_id_override: 可选，强制指定存储用的聊天ID（用于bot消息存入正确的会话文件）
 
         Returns:
             是否保存成功
@@ -89,8 +90,10 @@ class HistoryStorage:
         try:
             # 判断是群聊还是私聊
             is_private_chat = not bool(message.group_id)
-            
-            if is_private_chat:
+
+            if chat_id_override is not None:
+                chat_id = str(chat_id_override)
+            elif is_private_chat:
                 chat_id = message.sender.user_id
             else:
                 chat_id = message.group_id
@@ -263,7 +266,9 @@ class HistoryStorage:
             bot_msg = HistoryStorage.create_bot_message(chain, event)
 
             # 保存消息
-            return await HistoryStorage.save_message(bot_msg, event.get_platform_name())
+            is_private = event.is_private_chat()
+            chat_id = event.get_sender_id() if is_private else event.get_group_id()
+            return await HistoryStorage.save_message(bot_msg, event.get_platform_name(), chat_id_override=chat_id)
         except Exception as e:
             logger.error(f"保存机器人消息失败: {e}")
             return False
