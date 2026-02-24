@@ -4,7 +4,7 @@
 
 ![SpectreCore](https://avatars.githubusercontent.com/u/129108081?s=48&v=4)
 
-[![version](https://img.shields.io/badge/version-v2.1.10-blue.svg?style=flat-square)](https://github.com/23q3/astrbot_plugin_SpectreCore)
+[![version](https://img.shields.io/badge/version-v2.1.11-blue.svg?style=flat-square)](https://github.com/23q3/astrbot_plugin_SpectreCore)
 [![license](https://img.shields.io/badge/license-AGPL--3.0-green.svg?style=flat-square)](LICENSE)
 [![author](https://img.shields.io/badge/author-23q3-orange.svg?style=flat-square)](https://github.com/23q3)
 
@@ -70,11 +70,9 @@ SpectreCore (影芯) 是一个为 AstrBot 设计的高级群聊互动插件，�
 
 ## 📋 最新版本
 
-### v2.1.10 (2026-01-07)
+### v2.1.11 (2026-02-24)
 
-- ✨ **新增群聊黑名单和全局回复开关** - 添加群聊黑名单功能，可禁用指定群的自动回复；新增全局回复开关，一键启用/禁用所有群的自动回复功能 [#61](https://github.com/23q3/astrbot_plugin_SpectreCore/issues/61)[#83](https://github.com/23q3/astrbot_plugin_SpectreCore/issues/83)
-- 🔄 **使用AstrBot原生UMO人格机制** - 移除自定义人格注入逻辑，改用AstrBot原生的Unified Model Output人格机制，提高兼容性和稳定性 [#77](https://github.com/23q3/astrbot_plugin_SpectreCore/issues/77)
-- 🐛 **修复当前消息图片未被转述** - 修复当前消息中的图片未被包含在历史记录转述中的问题 [#84](https://github.com/23q3/astrbot_plugin_SpectreCore/issues/84)[#85](https://github.com/23q3/astrbot_plugin_SpectreCore/pull/85) @lymangos
+- 🐛 **修复机器人私聊消息存储路径错误** - 修复私聊中bot消息存入错误路径，导致用户看不到bot回复历史的问题 [#87](https://github.com/23q3/astrbot_plugin_SpectreCore/issues/87)[#90](https://github.com/23q3/astrbot_plugin_SpectreCore/pull/90) @Hola-Gracias
 
 ## ⚠️ 注意事项
 
