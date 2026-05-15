@@ -1,6 +1,7 @@
 from astrbot.api.all import *
 from typing import Optional
 import asyncio
+from .image_cache import ImageCacheManager
 
 class ImageCaptionUtils:
     """
@@ -12,14 +13,14 @@ class ImageCaptionUtils:
     # 保存context和config对象的静态变量
     context: Optional[Context] = None
     config: Optional[AstrBotConfig] = None
-    # 图片描述缓存
-    caption_cache: dict[str, str] = {}
     
     @staticmethod
     def init(context: Context, config: AstrBotConfig):
         """初始化图片转述工具类，保存context和config引用"""
         ImageCaptionUtils.context = context
         ImageCaptionUtils.config = config
+        # 初始化图片缓存管理器
+        ImageCacheManager.init(config)
     
     @staticmethod
     async def generate_image_caption(
@@ -38,10 +39,11 @@ class ImageCaptionUtils:
         Returns:
             生成的图片描述文本，如果失败则返回None
         """
-        # 检查缓存
-        if image in ImageCaptionUtils.caption_cache:
+        # 检查持久化缓存
+        cached_caption = ImageCacheManager.get(image)
+        if cached_caption is not None:
             logger.debug(f"命中图片描述缓存: {image[:50]}...")
-            return ImageCaptionUtils.caption_cache[image]
+            return cached_caption
             
         # 获取配置
         config = ImageCaptionUtils.config
@@ -83,10 +85,10 @@ class ImageCaptionUtils:
             llm_response = await asyncio.wait_for(call_llm(), timeout=timeout)
             caption = llm_response.completion_text
             
-            # 缓存结果
+            # 缓存结果到持久化缓存
             if caption:
-                 ImageCaptionUtils.caption_cache[image] = caption
-                 logger.debug(f"缓存图片描述: {image[:50]}... -> {caption}")
+                 ImageCacheManager.set(image, caption)
+                 logger.debug(f"缓存到持久化存储: {image[:50]}...")
                  
             return caption
         except asyncio.TimeoutError:

@@ -127,7 +127,8 @@ class SpectreCore(Star):
             "   你也可以重置指定群聊天记录 如/sc reset 群号\n"
             "使用history指令可以查看最近聊天记录 如/sc history\n"
             "使用mute/闭嘴指令临时禁用自动回复 如/sc mute 5 或 /sc 闭嘴 10\n"
-            "使用unmute/说话指令解除禁用 如/sc unmute 或 /sc 说话"
+            "使用unmute/说话指令解除禁用 如/sc unmute 或 /sc 说话\n"
+            "使用clear_image_cache/清除图片缓存指令清除图片转述缓存 如/sc clear_image_cache"
         )
         platform_name = event.get_platform_name()
         if platform_name in ("qq_official", "qq_official_webhook"):
@@ -287,3 +288,18 @@ class SpectreCore(Star):
         except Exception as e:
             logger.error(f"调用大模型时发生错误: {e}")
             yield event.plain_result(f"触发大模型回复失败喵：{str(e)}")
+
+    @filter.permission_type(filter.PermissionType.ADMIN)
+    @spectrecore.command("clear_image_cache", alias=['清除图片缓存'])
+    async def clear_image_cache(self, event: AstrMessageEvent):
+        """清除图片转述缓存喵"""
+        try:
+            from .utils import ImageCacheManager
+            success = ImageCacheManager.clear()
+            if success:
+                yield event.plain_result("已成功清除图片转述缓存喵~")
+            else:
+                yield event.plain_result("清除图片转述缓存失败喵，可能发生错误")
+        except Exception as e:
+            logger.error(f"清除图片缓存时发生错误: {e}")
+            yield event.plain_result(f"清除图片缓存失败喵：{str(e)}")
