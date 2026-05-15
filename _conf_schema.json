@@ -2,7 +2,7 @@
     "group_msg_history": {
         "description": "输入给大模型的消息数量",
         "type": "int",
-        "hint": "决定了会输入给大模型多少条q群历史消息(最多200条)",
+        "hint": "决定了会输入给大模型多少条q群历史消息",
         "default": 20
     },
     "enable_all_groups": {
@@ -93,7 +93,7 @@
             "image_count":{
                 "description":"直接输入给大模型的图片数量",
                 "type":"int",
-                "hint":"决定了会直接输入给大模型多少张图片,仅限支持图片输入的多模态模型可用(和下面的图像转述功能可以同时开启，最近的指定数量图片会直接输入)",
+                "hint":"决定了会直接输入给大模型多少张图片,仅限支持图片输入的多模态模型可用",
                 "default":0
             },
             "use_image_caption": {
