@@ -88,7 +88,7 @@ class ImageCaptionUtils:
             # 缓存结果到持久化缓存
             if caption:
                  ImageCacheManager.set(image, caption)
-                 logger.debug(f"缓存图片描述: {image[:50]}... -> {caption}")
+                 logger.debug(f"缓存到持久化存储: {image[:50]}...")
                  
             return caption
         except asyncio.TimeoutError:
