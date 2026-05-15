@@ -113,10 +113,6 @@ class HistoryStorage:
             sanitized_message = HistoryStorage._sanitize_message(message)
             history.append(sanitized_message)
 
-            # 限制历史记录数量
-            if len(history) > 200:
-                history = history[-200:]
-
             # 确保父目录存在
             os.makedirs(os.path.dirname(file_path), exist_ok=True)
 
@@ -463,4 +459,3 @@ class HistoryStorage:
 
         except Exception as e:
             logger.error(f"清理图片文件时发生错误: {e}")
-
