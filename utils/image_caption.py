@@ -21,6 +21,7 @@ class ImageCaptionUtils:
     context: Optional[Context] = None
     config: Optional[AstrBotConfig] = None
     DEFAULT_FAILED_IMAGE_SKIP_WINDOW_SECONDS = 300
+    SAFE_NETLOC_LABEL_RE = re.compile(r"[A-Za-z0-9_-]+")
     
     @staticmethod
     def init(context: Context, config: AstrBotConfig):
@@ -137,11 +138,23 @@ class ImageCaptionUtils:
         for label in labels:
             if not label or len(label) > 63:
                 return False
-            if label[0] == "-" or label[-1] == "-":
+            if label.startswith("-") or label.endswith("-"):
                 return False
-            if not re.fullmatch(r"[A-Za-z0-9_-]+", label):
+            if not ImageCaptionUtils.SAFE_NETLOC_LABEL_RE.fullmatch(label):
                 return False
         return True
+
+    @staticmethod
+    def _is_safe_unc_path(path: str) -> bool:
+        """
+        校验 UNC 路径是否包含可疑的路径穿越片段
+        """
+        if not path:
+            return False
+        if ":" in path:
+            return False
+        normalized = path.replace("\\", "/")
+        return ".." not in normalized.split("/")
 
     @staticmethod
     async def _ensure_image_accessible(image: str, timeout: int) -> bool:
@@ -164,7 +177,11 @@ class ImageCaptionUtils:
                         if not ImageCaptionUtils._is_safe_file_netloc(parsed.netloc):
                             logger.warning(f"不安全的 file:// 网络地址: {image}")
                             return False
-                        image_path = f"\\\\{parsed.netloc}{urllib.request.url2pathname(parsed.path or '')}"
+                        unc_path = urllib.request.url2pathname(parsed.path or "")
+                        if not ImageCaptionUtils._is_safe_unc_path(unc_path):
+                            logger.warning(f"不安全的 file:// UNC 路径: {image}")
+                            return False
+                        image_path = f"\\\\{parsed.netloc}{unc_path}"
                     else:
                         logger.warning(f"不支持的 file:// 网络路径: {image}")
                         return False
@@ -180,6 +197,7 @@ class ImageCaptionUtils:
         if os.path.exists(expanded_path):
             return await asyncio.to_thread(ImageCaptionUtils._check_local_image_accessible, expanded_path)
         if expanded_path != image:
+            # 展开后的路径不同，视为用户路径而非 base64
             return False
         path_ext = os.path.splitext(image)[1]
         # 若包含路径分隔符且带扩展名，则按路径处理，避免误判为 base64
