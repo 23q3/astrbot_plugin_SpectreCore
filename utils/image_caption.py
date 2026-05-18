@@ -53,7 +53,7 @@ class ImageCaptionUtils:
         同步检查图片 URL 是否可访问（供异步线程调用）
         """
         try:
-            req = urllib.request.Request(url, method="GET")
+            req = urllib.request.Request(url, method="GET", headers={"Range": "bytes=0-0"})
             with urllib.request.urlopen(req, timeout=timeout) as resp:
                 status = getattr(resp, "status", 200)
                 if not (200 <= status < 400):
@@ -94,16 +94,20 @@ class ImageCaptionUtils:
         if image.startswith("file://"):
             try:
                 parsed = urllib.parse.urlparse(image)
-                image_path = urllib.parse.unquote(parsed.path or "")
-                if parsed.netloc:
-                    image_path = f"{parsed.netloc}{image_path}"
+                if parsed.netloc and parsed.netloc not in ("", "localhost"):
+                    if os.name == "nt":
+                        image_path = f"\\\\{parsed.netloc}{urllib.request.url2pathname(parsed.path or '')}"
+                    else:
+                        return False
+                else:
+                    image_path = urllib.request.url2pathname(parsed.path or "")
                 if not image_path:
                     return False
                 return await asyncio.to_thread(ImageCaptionUtils._check_local_image_accessible, image_path)
             except Exception:
                 return False
 
-        if os.path.isabs(image) or image.startswith("."):
+        if os.path.isabs(image) or image.startswith(("./", "../", ".\\", "..\\")):
             return await asyncio.to_thread(ImageCaptionUtils._check_local_image_accessible, image)
 
         if image.startswith("data:"):
