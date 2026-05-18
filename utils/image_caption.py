@@ -56,6 +56,21 @@ class ImageCaptionUtils:
             req = urllib.request.Request(url, method="GET", headers={"Range": "bytes=0-0"})
             with urllib.request.urlopen(req, timeout=timeout) as resp:
                 status = getattr(resp, "status", 200)
+                if 200 <= status < 400:
+                    try:
+                        return bool(resp.read(1))
+                    except Exception:
+                        return False
+        except urllib.error.HTTPError as e:
+            if e.code not in (400, 405, 416):
+                return False
+        except Exception:
+            return False
+
+        try:
+            req = urllib.request.Request(url, method="GET")
+            with urllib.request.urlopen(req, timeout=timeout) as resp:
+                status = getattr(resp, "status", 200)
                 if not (200 <= status < 400):
                     return False
                 try:
@@ -98,6 +113,7 @@ class ImageCaptionUtils:
                     if os.name == "nt":
                         image_path = f"\\\\{parsed.netloc}{urllib.request.url2pathname(parsed.path or '')}"
                     else:
+                        logger.warning(f"不支持的 file:// 网络路径: {image}")
                         return False
                 else:
                     image_path = urllib.request.url2pathname(parsed.path or "")
@@ -107,8 +123,9 @@ class ImageCaptionUtils:
             except Exception:
                 return False
 
-        if os.path.isabs(image) or image.startswith(("./", "../", ".\\", "..\\")):
-            return await asyncio.to_thread(ImageCaptionUtils._check_local_image_accessible, image)
+        expanded_path = os.path.expanduser(image)
+        if os.path.exists(expanded_path):
+            return await asyncio.to_thread(ImageCaptionUtils._check_local_image_accessible, expanded_path)
 
         if image.startswith("data:"):
             try:
