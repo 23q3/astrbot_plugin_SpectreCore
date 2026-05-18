@@ -52,17 +52,47 @@ class ImageCaptionUtils:
         """
         同步检查图片 URL 是否可访问（供异步线程调用）
         """
+        head_fallback_statuses = {
+            400,  # Bad Request（部分代理/服务不支持 HEAD）
+            405,  # Method Not Allowed
+            501,  # Not Implemented
+        }
+        range_fallback_statuses = {
+            400,  # Bad Request（部分服务不支持 Range）
+            416,  # Range Not Satisfiable
+        }
+        try:
+            req = urllib.request.Request(url, method="HEAD")
+            with urllib.request.urlopen(req, timeout=timeout) as resp:
+                status = getattr(resp, "status", 200)
+                if not (200 <= status < 400):
+                    return False
+                content_length = resp.headers.get("Content-Length")
+                if content_length is not None:
+                    try:
+                        if int(content_length) <= 0:
+                            return False
+                    except (TypeError, ValueError):
+                        pass
+                    return True
+        except urllib.error.HTTPError as e:
+            if e.code not in head_fallback_statuses:
+                return False
+        except Exception:
+            return False
+
         try:
             req = urllib.request.Request(url, method="GET", headers={"Range": "bytes=0-0"})
             with urllib.request.urlopen(req, timeout=timeout) as resp:
                 status = getattr(resp, "status", 200)
-                if 200 <= status < 400:
-                    try:
-                        return bool(resp.read(1))
-                    except Exception:
-                        return False
+                if not (200 <= status < 400):
+                    return False
+                try:
+                    return bool(resp.read(1))
+                except Exception:
+                    return False
         except urllib.error.HTTPError as e:
-            if e.code not in (400, 405, 416):
+            if e.code not in range_fallback_statuses:
                 return False
         except Exception:
             return False
@@ -99,6 +129,8 @@ class ImageCaptionUtils:
     async def _ensure_image_accessible(image: str, timeout: int) -> bool:
         """
         确保图片存在且可获取
+
+        注意：file:// 的网络路径仅在 Windows 下支持，其他平台会直接拒绝。
         """
         if not image:
             return False
@@ -126,6 +158,10 @@ class ImageCaptionUtils:
         expanded_path = os.path.expanduser(image)
         if os.path.exists(expanded_path):
             return await asyncio.to_thread(ImageCaptionUtils._check_local_image_accessible, expanded_path)
+        if expanded_path != image:
+            return False
+        if (os.path.sep in image or (os.path.altsep and os.path.altsep in image)) and "." in image:
+            return False
 
         if image.startswith("data:"):
             try:
