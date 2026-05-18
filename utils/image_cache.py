@@ -127,7 +127,7 @@ class ImageCacheManager:
                         
                 logger.info(f"成功从磁盘加载 {len(ImageCacheManager.memory_cache)} 条图片缓存")
             else:
-                logger.warning(f"图片缓存数据格式不正确，跳过加载")
+                logger.warning(f"图片缓存数据格式不正确，期望 dict，实际为 {type(caption_data).__name__}，跳过加载")
 
             # 加载失败缓存到内存
             if isinstance(failure_data, dict):
@@ -427,8 +427,8 @@ class ImageCacheManager:
         """
         判断失败图片是否应跳过转述：
         - 存在失败记录
-        - 失败时间早于最近成功时间
-        - 且二者间隔在窗口时间内
+        - 失败时间早于最近成功时间（表示这张图是在该次成功之前失败的）
+        - 且二者间隔在窗口时间内（避免无限期跳过）
 
         Args:
             image: 图片的base64编码或URL

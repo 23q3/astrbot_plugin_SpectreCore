@@ -83,7 +83,7 @@ class ImageCaptionUtils:
         skip_window_seconds = ImageCaptionUtils.get_failed_image_skip_window_seconds()
 
         if ImageCacheManager.should_skip_failed_image(image, latest_success_timestamp, skip_window_seconds):
-            logger.debug(f"跳过失败图片转述（失败记录在最近成功转述之前）: {image[:50]}...")
+            logger.debug(f"跳过失败图片转述（该图片失败记录早于本轮最近一次成功，且时间间隔在窗口内）: {image[:50]}...")
             return None
 
         provider_id = image_processing_config.get("image_caption_provider_id", "")
