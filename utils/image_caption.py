@@ -1,6 +1,10 @@
 from astrbot.api.all import *
 from typing import Optional
 import asyncio
+import base64
+import binascii
+import urllib.request
+import urllib.error
 from .image_cache import ImageCacheManager
 
 class ImageCaptionUtils:
@@ -40,6 +44,51 @@ class ImageCaptionUtils:
         if not isinstance(skip_window_seconds, int) or skip_window_seconds < 0:
             return ImageCaptionUtils.DEFAULT_FAILED_IMAGE_SKIP_WINDOW_SECONDS
         return skip_window_seconds
+
+    @staticmethod
+    def _check_url_accessible(url: str, timeout: int) -> bool:
+        """
+        同步检查图片 URL 是否可访问（供异步线程调用）
+        """
+        try:
+            # 先尝试 HEAD，某些服务器不支持再回退 GET
+            req = urllib.request.Request(url, method="HEAD")
+            with urllib.request.urlopen(req, timeout=timeout) as resp:
+                return 200 <= getattr(resp, "status", 200) < 400
+        except Exception:
+            try:
+                with urllib.request.urlopen(url, timeout=timeout) as resp:
+                    return 200 <= getattr(resp, "status", 200) < 400
+            except Exception:
+                return False
+
+    @staticmethod
+    async def _ensure_image_accessible(image: str, timeout: int) -> bool:
+        """
+        确保图片存在且可获取
+        """
+        if not image:
+            return False
+
+        if image.startswith("http://") or image.startswith("https://"):
+            return await asyncio.to_thread(ImageCaptionUtils._check_url_accessible, image, timeout)
+
+        if image.startswith("data:"):
+            try:
+                header, b64data = image.split(",", 1)
+                if "base64" not in header:
+                    return False
+                base64.b64decode(b64data, validate=True)
+                return True
+            except (ValueError, binascii.Error):
+                return False
+
+        # 普通 base64 字符串
+        try:
+            base64.b64decode(image, validate=True)
+            return True
+        except (binascii.Error, ValueError):
+            return False
 
     @staticmethod
     async def generate_image_caption(
@@ -84,6 +133,13 @@ class ImageCaptionUtils:
 
         if ImageCacheManager.should_skip_failed_image(image, latest_success_timestamp, skip_window_seconds):
             logger.debug(f"跳过失败图片转述（该图片失败记录早于本轮最近一次成功，且时间间隔在窗口内）: {image[:50]}...")
+            return None
+
+        # 在调用大模型前确认图片可获取
+        image_accessible = await ImageCaptionUtils._ensure_image_accessible(image, timeout=min(timeout, 10))
+        if not image_accessible:
+            logger.warning(f"图片无法获取或不存在，已跳过转述: {image[:50]}...")
+            ImageCacheManager.set_failed(image)
             return None
 
         provider_id = image_processing_config.get("image_caption_provider_id", "")
