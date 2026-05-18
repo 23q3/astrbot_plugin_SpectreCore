@@ -3,6 +3,9 @@ from typing import Optional
 import asyncio
 import base64
 import binascii
+import os
+import re
+import urllib.parse
 import urllib.request
 import urllib.error
 from .image_cache import ImageCacheManager
@@ -18,6 +21,7 @@ class ImageCaptionUtils:
     context: Optional[Context] = None
     config: Optional[AstrBotConfig] = None
     DEFAULT_FAILED_IMAGE_SKIP_WINDOW_SECONDS = 300
+    SAFE_NETLOC_LABEL_RE = re.compile(r"[A-Za-z0-9_-]+")
     
     @staticmethod
     def init(context: Context, config: AstrBotConfig):
@@ -50,28 +54,145 @@ class ImageCaptionUtils:
         """
         同步检查图片 URL 是否可访问（供异步线程调用）
         """
+        head_fallback_statuses = {
+            400,  # Bad Request（部分代理/服务不支持 HEAD）
+            405,  # Method Not Allowed
+            501,  # Not Implemented
+        }
+        range_fallback_statuses = {
+            400,  # Bad Request（部分服务不支持 Range）
+            416,  # Range Not Satisfiable
+        }
         try:
-            # 先尝试 HEAD，某些服务器不支持再回退 GET
             req = urllib.request.Request(url, method="HEAD")
             with urllib.request.urlopen(req, timeout=timeout) as resp:
-                return 200 <= getattr(resp, "status", 200) < 400
-        except Exception:
-            try:
-                with urllib.request.urlopen(url, timeout=timeout) as resp:
-                    return 200 <= getattr(resp, "status", 200) < 400
-            except Exception:
+                status = getattr(resp, "status", 200)
+                if not (200 <= status < 400):
+                    return False
+                content_length = resp.headers.get("Content-Length")
+                if content_length is not None:
+                    try:
+                        if int(content_length) <= 0:
+                            return False
+                    except (TypeError, ValueError):
+                        pass
+                return True
+        except urllib.error.HTTPError as e:
+            if e.code not in head_fallback_statuses:
                 return False
+        except Exception:
+            return False
+
+        try:
+            req = urllib.request.Request(url, method="GET", headers={"Range": "bytes=0-0"})
+            with urllib.request.urlopen(req, timeout=timeout) as resp:
+                status = getattr(resp, "status", 200)
+                if not (200 <= status < 400):
+                    return False
+                return True
+        except urllib.error.HTTPError as e:
+            if e.code not in range_fallback_statuses:
+                return False
+        except Exception:
+            return False
+
+        try:
+            req = urllib.request.Request(url, method="GET")
+            with urllib.request.urlopen(req, timeout=timeout) as resp:
+                status = getattr(resp, "status", 200)
+                if not (200 <= status < 400):
+                    return False
+                return True
+        except Exception:
+            return False
+
+    @staticmethod
+    def _check_local_image_accessible(image_path: str) -> bool:
+        """
+        同步检查本地图片是否存在且可读取（供异步线程调用）
+        """
+        try:
+            if not image_path:
+                return False
+            if not os.path.exists(image_path) or not os.path.isfile(image_path):
+                return False
+            with open(image_path, "rb") as f:
+                return bool(f.read(1))
+        except Exception:
+            return False
+
+    @staticmethod
+    def _is_safe_file_netloc(netloc: str) -> bool:
+        """
+        校验 file:// 的 netloc 是否安全（仅允许主机名格式）
+        """
+        if not netloc or len(netloc) > 253:
+            return False
+        labels = netloc.split(".")
+        for label in labels:
+            if not label or len(label) > 63:
+                return False
+            if label.startswith("-") or label.endswith("-"):
+                return False
+            if not ImageCaptionUtils.SAFE_NETLOC_LABEL_RE.fullmatch(label):
+                return False
+        return True
+
+    @staticmethod
+    def _is_safe_unc_path(path: str) -> bool:
+        """
+        校验 UNC 路径是否包含可疑的路径穿越片段
+        """
+        if not path:
+            return False
+        if ":" in path:
+            return False
+        normalized = path.replace("\\", "/")
+        return ".." not in normalized.split("/")
 
     @staticmethod
     async def _ensure_image_accessible(image: str, timeout: int) -> bool:
         """
         确保图片存在且可获取
+
+        注意：file:// 的网络路径仅在 Windows 下支持，其他平台会直接拒绝。
         """
         if not image:
             return False
 
         if image.startswith("http://") or image.startswith("https://"):
             return await asyncio.to_thread(ImageCaptionUtils._check_url_accessible, image, timeout)
+
+        if image.startswith("file://"):
+            try:
+                parsed = urllib.parse.urlparse(image)
+                if parsed.netloc and parsed.netloc not in ("", "localhost"):
+                    if os.name == "nt":
+                        if not ImageCaptionUtils._is_safe_file_netloc(parsed.netloc):
+                            logger.warning(f"不安全的 file:// 网络地址: {image}")
+                            return False
+                        unc_path = urllib.request.url2pathname(parsed.path or "")
+                        if not ImageCaptionUtils._is_safe_unc_path(unc_path):
+                            logger.warning(f"不安全的 file:// UNC 路径: {image}")
+                            return False
+                        image_path = f"\\\\{parsed.netloc}{unc_path}"
+                    else:
+                        logger.warning(f"不支持的 file:// 网络路径: {image}")
+                        return False
+                else:
+                    image_path = urllib.request.url2pathname(parsed.path or "")
+                if not image_path:
+                    return False
+                return await asyncio.to_thread(ImageCaptionUtils._check_local_image_accessible, image_path)
+            except Exception:
+                return False
+
+        expanded_path = os.path.expanduser(image)
+        if os.path.exists(expanded_path):
+            return await asyncio.to_thread(ImageCaptionUtils._check_local_image_accessible, expanded_path)
+        if image.startswith("~"):
+            # 展开后的路径不同，视为用户路径而非 base64
+            return False
 
         if image.startswith("data:"):
             try:
