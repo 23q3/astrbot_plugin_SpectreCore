@@ -3,6 +3,8 @@ from typing import Optional
 import asyncio
 import base64
 import binascii
+import os
+import urllib.parse
 import urllib.request
 import urllib.error
 from .image_cache import ImageCacheManager
@@ -51,16 +53,32 @@ class ImageCaptionUtils:
         同步检查图片 URL 是否可访问（供异步线程调用）
         """
         try:
-            # 先尝试 HEAD，某些服务器不支持再回退 GET
-            req = urllib.request.Request(url, method="HEAD")
+            req = urllib.request.Request(url, method="GET")
             with urllib.request.urlopen(req, timeout=timeout) as resp:
-                return 200 <= getattr(resp, "status", 200) < 400
+                status = getattr(resp, "status", 200)
+                if not (200 <= status < 400):
+                    return False
+                try:
+                    return bool(resp.read(1))
+                except Exception:
+                    return False
         except Exception:
-            try:
-                with urllib.request.urlopen(url, timeout=timeout) as resp:
-                    return 200 <= getattr(resp, "status", 200) < 400
-            except Exception:
+            return False
+
+    @staticmethod
+    def _check_local_image_accessible(image_path: str) -> bool:
+        """
+        同步检查本地图片是否存在且可读取（供异步线程调用）
+        """
+        try:
+            if not image_path:
                 return False
+            if not os.path.exists(image_path) or not os.path.isfile(image_path):
+                return False
+            with open(image_path, "rb") as f:
+                return bool(f.read(1))
+        except Exception:
+            return False
 
     @staticmethod
     async def _ensure_image_accessible(image: str, timeout: int) -> bool:
@@ -73,20 +91,35 @@ class ImageCaptionUtils:
         if image.startswith("http://") or image.startswith("https://"):
             return await asyncio.to_thread(ImageCaptionUtils._check_url_accessible, image, timeout)
 
+        if image.startswith("file://"):
+            try:
+                parsed = urllib.parse.urlparse(image)
+                image_path = urllib.parse.unquote(parsed.path or "")
+                if parsed.netloc:
+                    image_path = f"{parsed.netloc}{image_path}"
+                if not image_path:
+                    return False
+                return await asyncio.to_thread(ImageCaptionUtils._check_local_image_accessible, image_path)
+            except Exception:
+                return False
+
+        if os.path.isabs(image) or image.startswith("."):
+            return await asyncio.to_thread(ImageCaptionUtils._check_local_image_accessible, image)
+
         if image.startswith("data:"):
             try:
                 header, b64data = image.split(",", 1)
                 if "base64" not in header:
                     return False
-                base64.b64decode(b64data, validate=True)
-                return True
+                decoded = base64.b64decode(b64data, validate=True)
+                return bool(decoded)
             except (ValueError, binascii.Error):
                 return False
 
         # 普通 base64 字符串
         try:
-            base64.b64decode(image, validate=True)
-            return True
+            decoded = base64.b64decode(image, validate=True)
+            return bool(decoded)
         except (binascii.Error, ValueError):
             return False
 
