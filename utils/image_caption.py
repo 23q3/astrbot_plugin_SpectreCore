@@ -13,6 +13,7 @@ class ImageCaptionUtils:
     # 保存context和config对象的静态变量
     context: Optional[Context] = None
     config: Optional[AstrBotConfig] = None
+    DEFAULT_FAILED_IMAGE_SKIP_WINDOW_SECONDS = 300
     
     @staticmethod
     def init(context: Context, config: AstrBotConfig):
@@ -23,10 +24,29 @@ class ImageCaptionUtils:
         ImageCacheManager.init(config)
     
     @staticmethod
+    def get_failed_image_skip_window_seconds() -> int:
+        """
+        获取失败图片跳过策略的时间窗口（秒）
+        """
+        config = ImageCaptionUtils.config
+        if not config:
+            return ImageCaptionUtils.DEFAULT_FAILED_IMAGE_SKIP_WINDOW_SECONDS
+
+        image_processing_config = config.get("image_processing", {})
+        skip_window_seconds = image_processing_config.get(
+            "failed_image_skip_window_seconds",
+            ImageCaptionUtils.DEFAULT_FAILED_IMAGE_SKIP_WINDOW_SECONDS
+        )
+        if not isinstance(skip_window_seconds, int) or skip_window_seconds < 0:
+            return ImageCaptionUtils.DEFAULT_FAILED_IMAGE_SKIP_WINDOW_SECONDS
+        return skip_window_seconds
+
+    @staticmethod
     async def generate_image_caption(
             image: str, # 图片的base64编码或URL
             umo: Optional[str] = None, # unified_msg_origin，用于 UMO 路由
-            timeout: int = 30
+            timeout: int = 30,
+            latest_success_timestamp: Optional[float] = None
         ) -> Optional[str]:
         """
         为单张图片生成文字描述
@@ -35,6 +55,7 @@ class ImageCaptionUtils:
             image: 图片的base64编码或URL
             umo: unified_msg_origin，用于获取对应 UMO 的 provider
             timeout: 超时时间（秒）
+            latest_success_timestamp: 最近一次成功转述时间戳（用于失败图片跳过策略）
 
         Returns:
             生成的图片描述文本，如果失败则返回None
@@ -42,6 +63,7 @@ class ImageCaptionUtils:
         # 检查持久化缓存
         cached_caption = ImageCacheManager.get(image)
         if cached_caption is not None:
+            ImageCacheManager.clear_failed(image)
             logger.debug(f"命中图片描述缓存: {image[:50]}...")
             return cached_caption
             
@@ -56,6 +78,12 @@ class ImageCaptionUtils:
         # 检查是否已启用图片转述
         image_processing_config = config.get("image_processing", {})
         if not image_processing_config.get("use_image_caption", False):
+            return None
+
+        skip_window_seconds = ImageCaptionUtils.get_failed_image_skip_window_seconds()
+
+        if ImageCacheManager.should_skip_failed_image(image, latest_success_timestamp, skip_window_seconds):
+            logger.debug(f"跳过失败图片转述（该图片失败记录早于本轮最近一次成功，且时间间隔在窗口内）: {image[:50]}...")
             return None
 
         provider_id = image_processing_config.get("image_caption_provider_id", "")
@@ -88,12 +116,17 @@ class ImageCaptionUtils:
             # 缓存结果到持久化缓存
             if caption:
                  ImageCacheManager.set(image, caption)
+                 ImageCacheManager.clear_failed(image)
                  logger.debug(f"缓存到持久化存储: {image[:50]}...")
+            else:
+                 ImageCacheManager.set_failed(image)
                  
             return caption
         except asyncio.TimeoutError:
             logger.warning(f"图片转述超时，超过了{timeout}秒")
+            ImageCacheManager.set_failed(image)
             return None
         except Exception as e:
             logger.error(f"图片转述失败: {e}")
+            ImageCacheManager.set_failed(image)
             return None

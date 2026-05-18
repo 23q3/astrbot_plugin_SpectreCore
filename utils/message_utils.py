@@ -82,6 +82,7 @@ class MessageUtils:
             umo: unified_msg_origin，用于 UMO 路由
         """
         outline = ""
+        latest_success_timestamp: Optional[float] = None
         for i in message_list:
             try:
                 # 获取组件类型
@@ -110,9 +111,14 @@ class MessageUtils:
                                     continue
                                 image = image_path
 
-                            caption = await ImageCaptionUtils.generate_image_caption(image, umo=umo)
+                            caption = await ImageCaptionUtils.generate_image_caption(
+                                image,
+                                umo=umo,
+                                latest_success_timestamp=latest_success_timestamp
+                            )
                             if caption:
                                 outline += f"[图片: {caption}]"
+                                latest_success_timestamp = time.time()
                             else:
                                 outline += f"[图片]"
                         else:
