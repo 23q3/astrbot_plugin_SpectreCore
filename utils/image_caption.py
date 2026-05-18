@@ -75,7 +75,6 @@ class ImageCaptionUtils:
                             return False
                     except (TypeError, ValueError):
                         pass
-                    return True
                 return True
         except urllib.error.HTTPError as e:
             if e.code not in head_fallback_statuses:
@@ -128,6 +127,23 @@ class ImageCaptionUtils:
             return False
 
     @staticmethod
+    def _is_safe_file_netloc(netloc: str) -> bool:
+        """
+        校验 file:// 的 netloc 是否安全（仅允许主机名格式）
+        """
+        if not netloc or len(netloc) > 253:
+            return False
+        labels = netloc.split(".")
+        for label in labels:
+            if not label or len(label) > 63:
+                return False
+            if label[0] == "-" or label[-1] == "-":
+                return False
+            if not re.fullmatch(r"[A-Za-z0-9_-]+", label):
+                return False
+        return True
+
+    @staticmethod
     async def _ensure_image_accessible(image: str, timeout: int) -> bool:
         """
         确保图片存在且可获取
@@ -145,7 +161,7 @@ class ImageCaptionUtils:
                 parsed = urllib.parse.urlparse(image)
                 if parsed.netloc and parsed.netloc not in ("", "localhost"):
                     if os.name == "nt":
-                        if not re.fullmatch(r"[A-Za-z0-9._-]+", parsed.netloc):
+                        if not ImageCaptionUtils._is_safe_file_netloc(parsed.netloc):
                             logger.warning(f"不安全的 file:// 网络地址: {image}")
                             return False
                         image_path = f"\\\\{parsed.netloc}{urllib.request.url2pathname(parsed.path or '')}"
@@ -175,15 +191,15 @@ class ImageCaptionUtils:
                 header, b64data = image.split(",", 1)
                 if "base64" not in header:
                     return False
-                decoded = base64.b64decode(b64data, validate=True)
-                return bool(decoded)
+                base64.b64decode(b64data, validate=True)
+                return True
             except (ValueError, binascii.Error):
                 return False
 
         # 普通 base64 字符串
         try:
-            decoded = base64.b64decode(image, validate=True)
-            return bool(decoded)
+            base64.b64decode(image, validate=True)
+            return True
         except (binascii.Error, ValueError):
             return False
 
