@@ -89,10 +89,7 @@ class ImageCaptionUtils:
                 status = getattr(resp, "status", 200)
                 if not (200 <= status < 400):
                     return False
-                try:
-                    return bool(resp.read(1))
-                except Exception:
-                    return False
+                return True
         except urllib.error.HTTPError as e:
             if e.code not in range_fallback_statuses:
                 return False
@@ -105,10 +102,7 @@ class ImageCaptionUtils:
                 status = getattr(resp, "status", 200)
                 if not (200 <= status < 400):
                     return False
-                try:
-                    return bool(resp.read(1))
-                except Exception:
-                    return False
+                return True
         except Exception:
             return False
 
@@ -196,12 +190,8 @@ class ImageCaptionUtils:
         expanded_path = os.path.expanduser(image)
         if os.path.exists(expanded_path):
             return await asyncio.to_thread(ImageCaptionUtils._check_local_image_accessible, expanded_path)
-        if expanded_path != image:
+        if image.startswith("~"):
             # 展开后的路径不同，视为用户路径而非 base64
-            return False
-        path_ext = os.path.splitext(image)[1]
-        # 若包含路径分隔符且带扩展名，则按路径处理，避免误判为 base64
-        if (os.path.sep in image or (os.path.altsep and os.path.altsep in image)) and path_ext:
             return False
 
         if image.startswith("data:"):
