@@ -4,7 +4,6 @@ import os
 import time
 from datetime import datetime
 from .image_caption import ImageCaptionUtils
-from .image_cache import ImageCacheManager
 import asyncio
 import json
 import traceback
@@ -111,18 +110,6 @@ class MessageUtils:
                                     outline += f"[图片: 文件不存在]"
                                     continue
                                 image = image_path
-
-                            image_processing_config = ImageCaptionUtils.config.get("image_processing", {}) if ImageCaptionUtils.config else {}
-                            skip_window_seconds = image_processing_config.get(
-                                "failed_image_skip_window_seconds",
-                                ImageCaptionUtils.DEFAULT_FAILED_IMAGE_SKIP_WINDOW_SECONDS
-                            )
-                            if not isinstance(skip_window_seconds, int) or skip_window_seconds < 0:
-                                skip_window_seconds = ImageCaptionUtils.DEFAULT_FAILED_IMAGE_SKIP_WINDOW_SECONDS
-
-                            if ImageCacheManager.should_skip_failed_image(image, latest_success_timestamp, skip_window_seconds):
-                                outline += f"[图片]"
-                                continue
 
                             caption = await ImageCaptionUtils.generate_image_caption(
                                 image,

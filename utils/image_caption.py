@@ -24,6 +24,24 @@ class ImageCaptionUtils:
         ImageCacheManager.init(config)
     
     @staticmethod
+    def get_failed_image_skip_window_seconds() -> int:
+        """
+        获取失败图片跳过策略的时间窗口（秒）
+        """
+        config = ImageCaptionUtils.config
+        if not config:
+            return ImageCaptionUtils.DEFAULT_FAILED_IMAGE_SKIP_WINDOW_SECONDS
+
+        image_processing_config = config.get("image_processing", {})
+        skip_window_seconds = image_processing_config.get(
+            "failed_image_skip_window_seconds",
+            ImageCaptionUtils.DEFAULT_FAILED_IMAGE_SKIP_WINDOW_SECONDS
+        )
+        if not isinstance(skip_window_seconds, int) or skip_window_seconds < 0:
+            return ImageCaptionUtils.DEFAULT_FAILED_IMAGE_SKIP_WINDOW_SECONDS
+        return skip_window_seconds
+
+    @staticmethod
     async def generate_image_caption(
             image: str, # 图片的base64编码或URL
             umo: Optional[str] = None, # unified_msg_origin，用于 UMO 路由
@@ -62,12 +80,7 @@ class ImageCaptionUtils:
         if not image_processing_config.get("use_image_caption", False):
             return None
 
-        skip_window_seconds = image_processing_config.get(
-            "failed_image_skip_window_seconds",
-            ImageCaptionUtils.DEFAULT_FAILED_IMAGE_SKIP_WINDOW_SECONDS
-        )
-        if not isinstance(skip_window_seconds, int) or skip_window_seconds < 0:
-            skip_window_seconds = ImageCaptionUtils.DEFAULT_FAILED_IMAGE_SKIP_WINDOW_SECONDS
+        skip_window_seconds = ImageCaptionUtils.get_failed_image_skip_window_seconds()
 
         if ImageCacheManager.should_skip_failed_image(image, latest_success_timestamp, skip_window_seconds):
             logger.debug(f"跳过失败图片转述（失败记录在最近成功转述之前）: {image[:50]}...")

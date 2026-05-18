@@ -429,6 +429,14 @@ class ImageCacheManager:
         - 存在失败记录
         - 失败时间早于最近成功时间
         - 且二者间隔在窗口时间内
+
+        Args:
+            image: 图片的base64编码或URL
+            latest_success_timestamp: 最近一次成功转述的时间戳
+            window_seconds: 失败记录与最近成功记录可判定为“相近”的时间窗口（秒）
+
+        Returns:
+            是否应跳过该图片转述
         """
         if latest_success_timestamp is None or window_seconds <= 0:
             return False
@@ -437,4 +445,4 @@ class ImageCacheManager:
         if failed_timestamp is None:
             return False
 
-        return failed_timestamp <= latest_success_timestamp and (latest_success_timestamp - failed_timestamp) <= window_seconds
+        return failed_timestamp < latest_success_timestamp and (latest_success_timestamp - failed_timestamp) <= window_seconds
