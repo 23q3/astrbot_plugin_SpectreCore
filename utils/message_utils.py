@@ -4,6 +4,7 @@ import os
 import time
 from datetime import datetime
 from .image_caption import ImageCaptionUtils
+from .image_cache import ImageCacheManager
 import asyncio
 import json
 import traceback
@@ -82,6 +83,7 @@ class MessageUtils:
             umo: unified_msg_origin，用于 UMO 路由
         """
         outline = ""
+        latest_success_timestamp: Optional[float] = None
         for i in message_list:
             try:
                 # 获取组件类型
@@ -110,9 +112,26 @@ class MessageUtils:
                                     continue
                                 image = image_path
 
-                            caption = await ImageCaptionUtils.generate_image_caption(image, umo=umo)
+                            image_processing_config = ImageCaptionUtils.config.get("image_processing", {}) if ImageCaptionUtils.config else {}
+                            skip_window_seconds = image_processing_config.get(
+                                "failed_image_skip_window_seconds",
+                                ImageCaptionUtils.DEFAULT_FAILED_IMAGE_SKIP_WINDOW_SECONDS
+                            )
+                            if not isinstance(skip_window_seconds, int) or skip_window_seconds < 0:
+                                skip_window_seconds = ImageCaptionUtils.DEFAULT_FAILED_IMAGE_SKIP_WINDOW_SECONDS
+
+                            if ImageCacheManager.should_skip_failed_image(image, latest_success_timestamp, skip_window_seconds):
+                                outline += f"[图片]"
+                                continue
+
+                            caption = await ImageCaptionUtils.generate_image_caption(
+                                image,
+                                umo=umo,
+                                latest_success_timestamp=latest_success_timestamp
+                            )
                             if caption:
                                 outline += f"[图片: {caption}]"
+                                latest_success_timestamp = time.time()
                             else:
                                 outline += f"[图片]"
                         else:
