@@ -4,6 +4,7 @@ import asyncio
 import base64
 import binascii
 import os
+import re
 import urllib.parse
 import urllib.request
 import urllib.error
@@ -75,6 +76,7 @@ class ImageCaptionUtils:
                     except (TypeError, ValueError):
                         pass
                     return True
+                return True
         except urllib.error.HTTPError as e:
             if e.code not in head_fallback_statuses:
                 return False
@@ -143,6 +145,9 @@ class ImageCaptionUtils:
                 parsed = urllib.parse.urlparse(image)
                 if parsed.netloc and parsed.netloc not in ("", "localhost"):
                     if os.name == "nt":
+                        if not re.fullmatch(r"[A-Za-z0-9._-]+", parsed.netloc):
+                            logger.warning(f"不安全的 file:// 网络地址: {image}")
+                            return False
                         image_path = f"\\\\{parsed.netloc}{urllib.request.url2pathname(parsed.path or '')}"
                     else:
                         logger.warning(f"不支持的 file:// 网络路径: {image}")
@@ -160,7 +165,9 @@ class ImageCaptionUtils:
             return await asyncio.to_thread(ImageCaptionUtils._check_local_image_accessible, expanded_path)
         if expanded_path != image:
             return False
-        if (os.path.sep in image or (os.path.altsep and os.path.altsep in image)) and "." in image:
+        path_ext = os.path.splitext(image)[1]
+        # 若包含路径分隔符且带扩展名，则按路径处理，避免误判为 base64
+        if (os.path.sep in image or (os.path.altsep and os.path.altsep in image)) and path_ext:
             return False
 
         if image.startswith("data:"):
