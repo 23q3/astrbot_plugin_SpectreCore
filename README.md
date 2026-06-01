@@ -4,7 +4,7 @@
 
 ![SpectreCore](https://avatars.githubusercontent.com/u/129108081?s=48&v=4)
 
-[![version](https://img.shields.io/badge/version-v2.1.11-blue.svg?style=flat-square)](https://github.com/23q3/astrbot_plugin_SpectreCore)
+[![version](https://img.shields.io/badge/version-v2.1.12-blue.svg?style=flat-square)](https://github.com/23q3/astrbot_plugin_SpectreCore)
 [![license](https://img.shields.io/badge/license-AGPL--3.0-green.svg?style=flat-square)](LICENSE)
 [![author](https://img.shields.io/badge/author-23q3-orange.svg?style=flat-square)](https://github.com/23q3)
 
@@ -70,9 +70,9 @@ SpectreCore (影芯) 是一个为 AstrBot 设计的高级群聊互动插件，�
 
 ## 📋 最新版本
 
-### v2.1.11 (2026-02-24)
+### v2.1.12 (2026-06-01)
 
-- 🐛 **修复机器人私聊消息存储路径错误** - 修复私聊中bot消息存入错误路径，导致用户看不到bot回复历史的问题 [#87](https://github.com/23q3/astrbot_plugin_SpectreCore/issues/87)[#90](https://github.com/23q3/astrbot_plugin_SpectreCore/pull/90) @Hola-Gracias
+- 🐛 **修复图片遗漏** - call_llm()遗漏当前消息图片导致模型无法读取用户上传的图片 [#96](https://github.com/23q3/astrbot_plugin_SpectreCore/issues/96)
 
 ## ⚠️ 注意事项
 
