@@ -241,13 +241,15 @@ class LLMUtils:
 
         # 图片相关处理
         image_urls = []
+        image_processing_config = config.get("image_processing", {})
+        use_image_caption = image_processing_config.get("use_image_caption", False)
 
         # 首先收集当前消息链中的图片（用户刚发送的，不受 image_count 限制）
-        if hasattr(event, "message_obj") and hasattr(event.message_obj, "message"):
+        if not use_image_caption and hasattr(event, "message_obj") and hasattr(event.message_obj, "message"):
             for component in event.message_obj.message:
                 if isinstance(component, Image):
                     try:
-                        url = component.file or component.url
+                        url = await component.convert_to_file_path()
                         if url and url not in image_urls:
                             image_urls.append(url)
                     except Exception as e:
@@ -255,7 +257,7 @@ class LLMUtils:
                         continue
 
         # 然后从历史消息中补充收集图片（受 image_count 限制）
-        history_image_count = config.get("image_processing", {}).get("image_count", 0)
+        history_image_count = image_processing_config.get("image_count", 0)
         if history_image_count and history_messages:
             messages_to_show = history_messages[-history_limit:] if len(history_messages) > history_limit else history_messages
 
@@ -264,7 +266,7 @@ class LLMUtils:
                     for component in message.message:
                         if isinstance(component, Image):
                             try:
-                                url = component.file or component.url
+                                url = await component.convert_to_file_path()
                                 if url and url not in image_urls:
                                     image_urls.append(url)
                                     if len(image_urls) >= history_image_count:
