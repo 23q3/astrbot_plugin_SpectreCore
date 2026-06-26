@@ -295,20 +295,7 @@ class HistoryStorage:
             with open(file_path, "r", encoding="utf-8") as f:
                 # 使用jsonpickle反序列化JSON数据
                 history = jsonpickle.decode(f.read())
-
-            for message in history:
-                if not hasattr(message, "message") or not message.message:
-                    continue
-                for component in message.message:
-                    if isinstance(component, Image) and component.file and component.file.startswith("file:///") and "/images/" in component.file:
-                        component.url = component.file
-                        try:
-                            from astrbot.core.utils.media_utils import file_uri_to_path
-
-                            component.path = file_uri_to_path(component.file)
-                        except Exception:
-                            pass
-
+                
             return history
         except Exception as e:
             logger.error(f"读取消息历史记录失败: {e}")
@@ -409,10 +396,7 @@ class HistoryStorage:
                             normalized_path = persistent_file_path.replace('\\', '/')
 
                             # 存储绝对路径到 file 字段（使用 file:/// 前缀，兼容 AstrBot）
-                            persistent_file_uri = f"file:///{normalized_path}"
-                            component.file = persistent_file_uri
-                            component.url = persistent_file_uri
-                            component.path = persistent_file_path
+                            component.file = f"file:///{normalized_path}"
 
                             logger.debug(f"成功将图片保存为持久化文件: {persistent_file_path}")
                         else:
@@ -479,3 +463,4 @@ class HistoryStorage:
 
         except Exception as e:
             logger.error(f"清理图片文件时发生错误: {e}")
+

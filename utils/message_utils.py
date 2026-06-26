@@ -1,5 +1,6 @@
 from astrbot.api.all import *
 from typing import List, Dict, Any, Optional
+import os
 import time
 from datetime import datetime
 from .image_caption import ImageCaptionUtils
@@ -99,8 +100,16 @@ class MessageUtils:
                 elif component_type == "image" or isinstance(i, Image):
                     # 图片处理逻辑
                     try:
-                        image = await i.convert_to_file_path()
+                        image = i.file if i.file else i.url
                         if image:
+                            if image.startswith("file:///"):
+                                image_path = image[8:]
+                                if not os.path.exists(image_path):
+                                    logger.warning(f"持久化图片文件不存在: {image_path}")
+                                    outline += f"[图片: 文件不存在]"
+                                    continue
+                                image = image_path
+
                             caption = await ImageCaptionUtils.generate_image_caption(image, umo=umo)
                             if caption:
                                 outline += f"[图片: {caption}]"
