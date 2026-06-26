@@ -1,6 +1,5 @@
 from astrbot.api.all import *
 from typing import List, Dict, Any, Optional
-import os
 import time
 from datetime import datetime
 from .image_caption import ImageCaptionUtils
@@ -13,56 +12,6 @@ class MessageUtils:
     """
     消息处理工具类
     """
-
-    @staticmethod
-    def _get_image_caption_ref(component: Image) -> tuple[str, bool]:
-        """
-        获取可交给图片转述 provider 的图片引用。
-        不在这里下载 URL 或展开 base64，避免没有事件生命周期可清理的临时文件。
-        """
-        file_ref = getattr(component, "file", None) or ""
-        url_ref = getattr(component, "url", None) or ""
-
-        if not file_ref and not url_ref:
-            return "", False
-
-        def usable_ref(image: str) -> str:
-            if image.startswith(("http://", "https://", "base64://", "data:")):
-                return image
-            try:
-                if os.path.exists(image):
-                    return image
-            except OSError:
-                pass
-            return ""
-
-        try:
-            from astrbot.core.utils.media_utils import file_uri_to_path, is_file_uri
-
-            if is_file_uri(file_ref):
-                image_path = file_uri_to_path(file_ref)
-                if not os.path.exists(image_path):
-                    fallback = usable_ref(url_ref)
-                    if fallback:
-                        return fallback, False
-                    logger.warning(f"持久化图片文件不存在: {image_path}")
-                    return "", True
-                return image_path, False
-        except Exception as e:
-            logger.debug(f"规范化图片 file URI 失败: {e}")
-
-        if file_ref.startswith("file:///"):
-            image_path = file_ref[8:]
-            if not os.path.exists(image_path):
-                fallback = usable_ref(url_ref)
-                if fallback:
-                    return fallback, False
-                logger.warning(f"持久化图片文件不存在: {image_path}")
-                return "", True
-            return image_path, False
-
-        image = usable_ref(file_ref) or usable_ref(url_ref) or file_ref or url_ref
-        return image, False
         
     @staticmethod
     async def format_history_for_llm(history_messages: List[AstrBotMessage], max_messages: int = 20, umo: Optional[str] = None) -> str:
@@ -150,10 +99,7 @@ class MessageUtils:
                 elif component_type == "image" or isinstance(i, Image):
                     # 图片处理逻辑
                     try:
-                        image, missing_file = MessageUtils._get_image_caption_ref(i)
-                        if missing_file:
-                            outline += f"[图片: 文件不存在]"
-                            continue
+                        image = await i.convert_to_file_path()
                         if image:
                             caption = await ImageCaptionUtils.generate_image_caption(image, umo=umo)
                             if caption:
