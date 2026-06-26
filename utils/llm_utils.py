@@ -2,6 +2,7 @@ from astrbot.api.all import *
 from typing import Dict, List, Optional, Any
 import time
 import threading
+from pathlib import Path
 from .history_storage import HistoryStorage
 from .message_utils import MessageUtils
 from astrbot.core.provider.entites import ProviderRequest
@@ -16,6 +17,23 @@ class LLMUtils:
     # 格式: {"{platform_name}_{chat_type}_{chat_id}": {"last_call_time": timestamp, "in_progress": True/False}}
     _llm_call_status: Dict[str, Dict[str, Any]] = {}
     _lock = threading.Lock()  # 用于线程安全的锁
+
+    @staticmethod
+    def _track_temp_image_path(event: AstrMessageEvent, image_path: str) -> None:
+        """只登记 AstrBot 临时目录中的图片，避免误删持久化历史图片。"""
+        if not image_path or not hasattr(event, "track_temporary_local_file"):
+            return
+
+        try:
+            from astrbot.core.utils.astrbot_path import get_astrbot_temp_path
+
+            resolved_path = Path(image_path).resolve()
+            temp_dir = Path(get_astrbot_temp_path()).resolve()
+            resolved_path.relative_to(temp_dir)
+        except (OSError, TypeError, ValueError):
+            return
+
+        event.track_temporary_local_file(str(resolved_path))
     
     @staticmethod
     def get_chat_key(platform_name: str, is_private_chat: bool, chat_id: str) -> str:
@@ -242,16 +260,16 @@ class LLMUtils:
         # 图片相关处理
         image_urls = []
         image_processing_config = config.get("image_processing", {})
-        use_image_caption = image_processing_config.get("use_image_caption", False)
 
         # 首先收集当前消息链中的图片（用户刚发送的，不受 image_count 限制）
-        if not use_image_caption and hasattr(event, "message_obj") and hasattr(event.message_obj, "message"):
+        if hasattr(event, "message_obj") and hasattr(event.message_obj, "message"):
             for component in event.message_obj.message:
                 if isinstance(component, Image):
                     try:
                         url = await component.convert_to_file_path()
                         if url and url not in image_urls:
                             image_urls.append(url)
+                            LLMUtils._track_temp_image_path(event, url)
                     except Exception as e:
                         logger.warning(f"处理当前消息图片URL时出错: {e}")
                         continue
@@ -269,6 +287,7 @@ class LLMUtils:
                                 url = await component.convert_to_file_path()
                                 if url and url not in image_urls:
                                     image_urls.append(url)
+                                    LLMUtils._track_temp_image_path(event, url)
                                     if len(image_urls) >= history_image_count:
                                         break
                             except Exception as e:
