@@ -152,19 +152,17 @@ class MessageUtils:
                 elif component_type in ["forward", "node", "nodes"] or isinstance(i, (Forward, Node, Nodes)):
                     outline += f"[合并转发消息]"
                 elif component_type == "json" or isinstance(i, Json):
-                    # JSON处理逻辑
+                    # JSON处理逻辑（AstrBot 会把 data 解析为 dict，旧的历史记录中可能仍是 str）
                     data = getattr(i, 'data', None)
                     if isinstance(data, str):
                         try:
-                            json_data = json.loads(data)
-                            if "prompt" in json_data:
-                                outline += f"[JSON卡片:{json_data.get('prompt', '')}]"
-                            elif "app" in json_data:
-                                outline += f"[小程序:{json_data.get('app', '')}]"
-                            else:
-                                outline += "[JSON消息]"
+                            data = json.loads(data)
                         except (json.JSONDecodeError, ValueError, TypeError):
-                            outline += "[JSON消息]"
+                            data = None
+                    if isinstance(data, dict) and data.get("prompt"):
+                        outline += f"[JSON卡片:{data['prompt']}]"
+                    elif isinstance(data, dict) and data.get("app"):
+                        outline += f"[小程序:{data['app']}]"
                     else:
                         outline += "[JSON消息]"
                 elif component_type in ["rps", "dice", "shake"] or isinstance(i, (RPS, Dice, Shake)):
