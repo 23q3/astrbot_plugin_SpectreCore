@@ -43,6 +43,12 @@
         "hint":"开启后会根据群聊消息自动判断是否需要回复,建议提示好AI在什么情况下不回复,什么情况下回复",
         "default":false
     },
+    "smart_quote":{
+        "description":"模型自主选择引用的消息",
+        "type":"bool",
+        "hint":"AstrBot 开启「回复时引用发送人消息」后总是引用触发回复的消息，但模型可能回应的是聊天记录里的其他消息，导致引用错位。开启后模型可以指定引用它真正回应的那条消息。仅在 AstrBot 开启了该选项时生效，需要 AstrBot v4.19.3 及以上",
+        "default":true
+    },
     "use_func_tool":{
         "description":"是否启用函数工具",
         "type":"bool",

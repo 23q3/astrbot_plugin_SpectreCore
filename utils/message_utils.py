@@ -4,6 +4,7 @@ import os
 import time
 from datetime import datetime
 from .image_caption import ImageCaptionUtils
+from .quote_utils import QuoteUtils
 import asyncio
 import json
 import traceback
@@ -15,7 +16,7 @@ class MessageUtils:
     """
         
     @staticmethod
-    async def format_history_for_llm(history_messages: List[AstrBotMessage], max_messages: int = 20, umo: Optional[str] = None) -> str:
+    async def format_history_for_llm(history_messages: List[AstrBotMessage], max_messages: int = 20, umo: Optional[str] = None, quote_targets: Optional[Dict[str, Dict[str, Any]]] = None) -> str:
         """
         将历史消息列表格式化为适合输入给大模型的文本格式
 
@@ -23,6 +24,7 @@ class MessageUtils:
             history_messages: 历史消息列表
             max_messages: 最大消息数量，默认20条
             umo: unified_msg_origin，用于 UMO 路由
+            quote_targets: 可选，传入字典时为可引用的消息编号，并将 {编号: 引用目标} 写入该字典
 
         Returns:
             格式化后的历史消息文本
@@ -58,7 +60,14 @@ class MessageUtils:
             message_content = await MessageUtils.outline_message_list(msg.message, umo=umo) if hasattr(msg, "message") and msg.message else ""
             
             # 格式化该条消息
-            message_text = f"发送者: {sender_name} (ID: {sender_id})\n"
+            message_text = ""
+            if quote_targets is not None:
+                target = QuoteUtils.make_target(msg, message_content)
+                if target:
+                    quote_no = str(len(quote_targets) + 1)
+                    quote_targets[quote_no] = target
+                    message_text += f"编号: {quote_no}\n"
+            message_text += f"发送者: {sender_name} (ID: {sender_id})\n"
             message_text += f"时间: {send_time}\n"
             message_text += f"内容: {message_content}"
             

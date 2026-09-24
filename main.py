@@ -89,7 +89,7 @@ class SpectreCore(Star):
 
     @filter.on_decorating_result()
     async def on_decorating_result(self, event: AstrMessageEvent):
-        """在消息发送前处理读空气功能喵"""
+        """在消息发送前处理读空气和模型自主引用喵"""
         try:
             result = event.get_result()
             if result is None or not result.chain:
@@ -108,6 +108,10 @@ class SpectreCore(Star):
                     logger.debug(f"检测到读空气标记，阻止消息发送。事件结果: {event.get_result()}")
                     event.clear_result()
                     logger.debug(f"已清空事件结果: {event.get_result()}")
+                    return
+
+                # 处理模型自主引用标记
+                QuoteUtils.apply(event, result, self.context)
 
         except Exception as e:
             logger.error(f"处理消息发送前事件时发生错误: {e}")
