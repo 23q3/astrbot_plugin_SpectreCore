@@ -60,7 +60,7 @@ astrbot_plugin_SpectreCore/
   - **persona_utils.py**: 人格处理相关的工具方法
   - **reply_decision.py**: 决策是否需要对消息进行回复
   - **message_utils.py**: 消息处理和转换工具
-  - **quote_utils.py**: 让模型指定要引用的消息，修正引用错位
+  - **quote_utils.py**: 让模型自主决定是否引用、引用哪条消息
   - **image_caption.py**: 图片描述和转述功能
 
 ## 数据存储

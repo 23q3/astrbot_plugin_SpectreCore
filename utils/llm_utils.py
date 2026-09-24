@@ -207,8 +207,10 @@ class LLMUtils:
         # 注意：基于 message_id 精确排除当前消息，避免重复
         history_limit = config.get("group_msg_history", 10)
         history_messages = HistoryStorage.get_history(platform_name, is_private, chat_id)
-        # 模型自主引用：为聊天记录中的消息编号，供模型用 [引用:编号] 指定要引用的消息
-        quote_targets = {} if QuoteUtils.is_enabled(event, config, context) else None
+        # 模型自主引用：为聊天记录中的消息和当前消息编号，供模型用 [引用:编号] 指定要引用的消息
+        quote_mode = QuoteUtils.get_mode(event, config, context)
+        quote_targets = {} if quote_mode else None
+        current_target = None
 
         try:
             if history_messages:
@@ -233,9 +235,15 @@ class LLMUtils:
         # 行为指引
         env_description += "\n(在聊天记录中，你的用户名以AstrBot被代替了)"
         env_description += "\n(如果你想回复某人，不要使用类似 [At:id(昵称)]这样的格式)"
-        if quote_targets:
-            event.set_extra(QuoteUtils.EXTRA_KEY, quote_targets)
-            env_description += "\n(你的回复默认会引用这条新消息。如果你回应的其实是聊天记录中的另一条消息，请在回复的最开头写上 [引用:编号] 来引用那条消息，编号见聊天记录；回应这条新消息时不需要写)"
+        if quote_mode:
+            current_no = None
+            current_target = QuoteUtils.make_target(event.message_obj, "")
+            if current_target:
+                current_no = str(len(quote_targets) + 1)
+                quote_targets[current_no] = current_target
+            if quote_targets:
+                event.set_extra(QuoteUtils.EXTRA_KEY, quote_targets)
+                env_description += QuoteUtils.build_instruction(quote_mode, current_no)
 
         if config.get("read_air", False):
             env_description += "\n\n现在你收到了一条新消息，你的反应是:\n(如果你想发送一条消息，直接输出发送的内容，如果你选择忽略，直接输出<NO_RESPONSE>)"
@@ -289,6 +297,8 @@ class LLMUtils:
             prompt = await MessageUtils.outline_message_list(event.message_obj.message, umo=umo)
         else:
             prompt = event.get_message_outline()
+        if current_target:
+            current_target["content"] = prompt
 
         return event.request_llm(
             prompt=prompt,
