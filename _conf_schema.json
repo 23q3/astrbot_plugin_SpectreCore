@@ -43,6 +43,12 @@
         "hint":"开启后会根据群聊消息自动判断是否需要回复,建议提示好AI在什么情况下不回复,什么情况下回复",
         "default":false
     },
+    "smart_quote":{
+        "description":"模型自主引用消息",
+        "type":"bool",
+        "hint":"开启后模型可以像人一样引用它回应的消息。AstrBot 的「回复时引用发送人消息」关闭时，由模型决定是否引用、引用哪条；开启时每条回复都会引用，由模型决定引用哪条，避免总是引用触发回复的消息而错位。需要 AstrBot v4.19.3 及以上，流式输出时不生效",
+        "default":true
+    },
     "use_func_tool":{
         "description":"是否启用函数工具",
         "type":"bool",

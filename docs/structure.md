@@ -23,6 +23,7 @@ astrbot_plugin_SpectreCore/
     ├── persona_utils.py   # 人格处理工具
     ├── reply_decision.py  # 回复决策工具
     ├── message_utils.py   # 消息处理工具
+    ├── quote_utils.py     # 模型自主引用工具
     └── image_caption.py   # 图片描述工具
 ```
 
@@ -45,6 +46,7 @@ astrbot_plugin_SpectreCore/
   - 思考过程过滤
   - 人格设置
   - 读空气功能
+  - 模型自主引用
   - 函数工具开关
   - 模型频率设置
   - 图片处理配置
@@ -58,6 +60,7 @@ astrbot_plugin_SpectreCore/
   - **persona_utils.py**: 人格处理相关的工具方法
   - **reply_decision.py**: 决策是否需要对消息进行回复
   - **message_utils.py**: 消息处理和转换工具
+  - **quote_utils.py**: 让模型自主决定是否引用、引用哪条消息
   - **image_caption.py**: 图片描述和转述功能
 
 ## 数据存储

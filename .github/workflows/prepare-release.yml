@@ -12,7 +12,35 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  detect:
+    runs-on: ubuntu-latest
+    outputs:
+      changelog_file: ${{ steps.find_changelog.outputs.changelog_file }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.sha }}
+
+      - name: Find new changelog file
+        id: find_changelog
+        run: |
+          # 只把本次推送中新增的 changelog 文件视为发版信号，修改已有的 changelog 不会触发发版
+          CHANGELOG_FILE=$(git diff --name-only --diff-filter=A ${{ github.event.before }}..${{ github.sha }} -- 'changelogs/v*.md' | head -1 || true)
+
+          if [ -z "$CHANGELOG_FILE" ]; then
+            echo "No new changelog file in this push, skipping release"
+            exit 0
+          fi
+
+          echo "changelog_file=$CHANGELOG_FILE" >> "$GITHUB_OUTPUT"
+          echo "Found changelog file: $CHANGELOG_FILE"
+
   prepare-release:
+    needs: detect
+    if: needs.detect.outputs.changelog_file != ''
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -25,34 +53,10 @@ jobs:
           fetch-depth: 0
           ref: ${{ github.sha }}
 
-      - name: Find new changelog file
-        id: find_changelog
-        run: |
-          # 获取本次推送中变更的 changelog 文件
-          CHANGELOG_FILE=$(git diff --name-only ${{ github.event.before }}..${{ github.sha }} -- 'changelogs/v*.md' | head -1 || true)
-
-          if [ -z "$CHANGELOG_FILE" ]; then
-            echo "No changelog file found in push range, checking added files..."
-            CHANGELOG_FILE=$(git diff --name-only --diff-filter=A ${{ github.event.before }}..${{ github.sha }} | grep '^changelogs/v.*\.md$' | head -1 || true)
-          fi
-
-          if [ -z "$CHANGELOG_FILE" ]; then
-            echo "No new changelog file found in commit"
-            exit 1
-          fi
-
-          if [ ! -f "$CHANGELOG_FILE" ]; then
-            echo "Changelog file does not exist: $CHANGELOG_FILE"
-            exit 1
-          fi
-
-          echo "changelog_file=$CHANGELOG_FILE" >> "$GITHUB_OUTPUT"
-          echo "Found changelog file: $CHANGELOG_FILE"
-
       - name: Extract version from filename
         id: version
         run: |
-          CHANGELOG_FILE="${{ steps.find_changelog.outputs.changelog_file }}"
+          CHANGELOG_FILE="${{ needs.detect.outputs.changelog_file }}"
 
           # 从文件名提取版本号 (changelogs/v2.1.8.md -> v2.1.8)
           VERSION=$(basename "$CHANGELOG_FILE" .md)
@@ -86,7 +90,7 @@ jobs:
       - name: Read changelog content
         id: changelog
         run: |
-          CHANGELOG_FILE="${{ steps.find_changelog.outputs.changelog_file }}"
+          CHANGELOG_FILE="${{ needs.detect.outputs.changelog_file }}"
 
           # 读取 changelog 内容并保存到临时文件
           cat "$CHANGELOG_FILE" > /tmp/changelog_content.txt
@@ -167,9 +171,10 @@ jobs:
 
           echo "Updated README.md latest version section"
 
-      - name: Commit changes (amend to changelog commit)
+      - name: Commit changes
         run: |
           VERSION="${{ steps.version.outputs.version }}"
+          CHANGELOG_FILE="${{ needs.detect.outputs.changelog_file }}"
 
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -182,11 +187,18 @@ jobs:
             exit 0
           fi
 
-          # 将 bump version 变更合并到 changelog 提交中
-          git commit --amend -m "release: $VERSION"
-          git push origin HEAD:dev --force-with-lease
-
-          echo "Amended changelog commit with version bump"
+          # 最后一个提交只包含该 changelog 时，把版本号变更合并进去，一个版本只留一个提交；
+          # 否则追加一个提交，避免改写其他提交
+          if [ "$(git diff-tree --no-commit-id --name-only -r HEAD)" = "$CHANGELOG_FILE" ]; then
+            git commit --amend -m "release: $VERSION"
+            # 只在远端 dev 仍是触发本次工作流的提交时覆盖，避免丢掉之后推送的提交
+            git push origin HEAD:dev --force-with-lease=dev:${{ github.sha }}
+            echo "Amended changelog commit with version bump"
+          else
+            git commit -m "release: $VERSION"
+            git push origin HEAD:dev
+            echo "Added release commit with version bump"
+          fi
 
       - name: Create Pull Request
         env:

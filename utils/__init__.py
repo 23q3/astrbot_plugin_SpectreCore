@@ -9,6 +9,7 @@ from .llm_utils import LLMUtils
 from .persona_utils import PersonaUtils
 from .text_filter import TextFilter
 from .reply_decision import ReplyDecision
+from .quote_utils import QuoteUtils
 
 __all__ = [
     "HistoryStorage",
@@ -17,5 +18,6 @@ __all__ = [
     "LLMUtils",
     "PersonaUtils",
     "TextFilter",
-    "ReplyDecision"
+    "ReplyDecision",
+    "QuoteUtils"
 ] 

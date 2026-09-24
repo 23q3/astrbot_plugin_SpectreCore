@@ -13,6 +13,7 @@
 
 <!--如果分支被合并，您的代码将服务于很多用户！在提交前，请核查一下几点内容-->
 
+- [ ] 🌿 这个 PR 提交到了 `dev` 分支，而不是 `main`
 - [ ] 😊 我的 Commit Message 符合良好的[规范](https://www.conventionalcommits.org/en/v1.0.0/#summary)
 - [ ] 👀 我的更改经过良好的测试
 - [ ] 🤓 我确保没有引入新依赖库，或者引入了新依赖库的同时将其添加到了 `requirements.txt` 和 `pyproject.toml` 文件相应位置。
