@@ -4,7 +4,7 @@
 
 ![SpectreCore](https://avatars.githubusercontent.com/u/129108081?s=48&v=4)
 
-[![version](https://img.shields.io/badge/version-v2.1.13-blue.svg?style=flat-square)](https://github.com/23q3/astrbot_plugin_SpectreCore)
+[![version](https://img.shields.io/badge/version-v2.2.0-blue.svg?style=flat-square)](https://github.com/23q3/astrbot_plugin_SpectreCore)
 [![license](https://img.shields.io/badge/license-AGPL--3.0-green.svg?style=flat-square)](LICENSE)
 [![author](https://img.shields.io/badge/author-23q3-orange.svg?style=flat-square)](https://github.com/23q3)
 
@@ -71,11 +71,10 @@ SpectreCore (影芯) 是一个为 AstrBot 设计的高级群聊互动插件，�
 
 ## 📋 最新版本
 
-### v2.1.13 (2026-06-26)
+### v2.2.0 (2026-09-24)
 
-- 🐛 **修复图片路径解析** - 统一使用 AstrBot 消息组件解析图片路径，修复 aiocqhttp / OneBot 图片消息在图像转述和多模态输入场景下可能无法正确读取的问题 [#98](https://github.com/23q3/astrbot_plugin_SpectreCore/pull/101)
-- 🐛 **修复历史图片读取** - 修复持久化图片仍可能优先使用过期 URL 的问题，确保历史图片可从本地持久化文件读取 [#98](https://github.com/23q3/astrbot_plugin_SpectreCore/pull/101)
-- 🐛 **修复历史图片计数** - 修复当前消息图片占用历史图片输入额度的问题，确保 `image_count` 只限制历史图片数量 [#98](https://github.com/23q3/astrbot_plugin_SpectreCore/pull/101)
+- ✨ **模型自主引用** - 新增 `smart_quote` 配置（默认开启），AI 可以像真人一样自己决定是否引用、引用哪条消息。开启 AstrBot「回复时引用发送人消息」时，每条回复仍会引用，但改为引用 AI 真正回应的那条，修复引用错位的问题；未开启时 AI 可能会主动引用消息，不需要可关闭 `smart_quote`。需要 AstrBot v4.19.3 及以上 [#104](https://github.com/23q3/astrbot_plugin_SpectreCore/issues/104)
+- 🐛 **修复卡片消息解析** - 修复 AstrBot v4.10.0 起 QQ 小程序、分享卡片等消息传给 AI 时只显示为 [JSON消息]、丢失标题的问题 [#104](https://github.com/23q3/astrbot_plugin_SpectreCore/issues/104)
 
 ## ⚠️ 注意事项
 
