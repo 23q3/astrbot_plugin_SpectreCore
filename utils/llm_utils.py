@@ -179,6 +179,9 @@ class LLMUtils:
 
         # 构建环境描述（注入到 system_prompt，不污染 prompt）
         env_description = f"\n\n你正在浏览聊天软件，你在聊天软件上的id是{event.get_self_id()}"
+        # 逐轮变化的内容统一走 tail_block，拼到 user prompt 尾部；system_prompt 保持字节稳定，
+        # 否则每轮变一次会让整段前缀的 prompt cache 全部失效（DeepSeek/Anthropic 都只按前缀命中）。
+        tail_block = ""
 
         # 对于aiocqhttp平台，尝试获取bot用户名
         if platform_name == "aiocqhttp" and hasattr(event, "bot"):
@@ -223,14 +226,14 @@ class LLMUtils:
                     history_for_context = history_messages[:-1] if len(history_messages) > 1 else []
                 if history_for_context:
                     formatted_history = await MessageUtils.format_history_for_llm(history_for_context, max_messages=history_limit, umo=umo, quote_targets=quote_targets)
-                    env_description += "\n\n以下是最近的聊天记录：\n" + formatted_history
+                    tail_block += "\n\n以下是最近的聊天记录：\n" + formatted_history
                 else:
-                    env_description += "\n\n你没看见任何聊天记录，看来最近没有消息。"
+                    tail_block += "\n\n你没看见任何聊天记录，看来最近没有消息。"
             else:
-                env_description += "\n\n你没看见任何聊天记录，看来最近没有消息。"
+                tail_block += "\n\n你没看见任何聊天记录，看来最近没有消息。"
         except Exception as e:
             logger.error(f"获取或格式化历史记录失败: {e}")
-            env_description += "\n\n你没看见任何聊天记录，看来最近没有消息。"
+            tail_block += "\n\n你没看见任何聊天记录，看来最近没有消息。"
 
         # 行为指引
         env_description += "\n(在聊天记录中，你的用户名以AstrBot被代替了)"
@@ -290,7 +293,7 @@ class LLMUtils:
                         break
 
             if image_urls:
-                system_prompt += f"\n\n已经按照从晚到早的顺序为你提供了聊天记录中的{len(image_urls)}张图片，你可以直接查看并理解它们。这些图片出现在聊天记录中。"
+                tail_block += f"\n\n已经按照从晚到早的顺序为你提供了聊天记录中的{len(image_urls)}张图片，你可以直接查看并理解它们。这些图片出现在聊天记录中。"
 
         # prompt 只保留用户当前消息，使用 MessageUtils 确保图片被转述
         if hasattr(event, "message_obj") and hasattr(event.message_obj, "message"):
@@ -299,6 +302,13 @@ class LLMUtils:
             prompt = event.get_message_outline()
         if current_target:
             current_target["content"] = prompt
+
+        # 前缀缓存友好模式（默认开启）：逐轮变化的内容走 user 尾部，system_prompt 保持字节稳定。
+        # 关闭后退回旧行为：这些内容写回 system_prompt（会让服务端前缀缓存在每轮都失效）。
+        if config.get("cache_friendly_prompt", True):
+            prompt = prompt + tail_block
+        else:
+            system_prompt += tail_block
 
         return event.request_llm(
             prompt=prompt,
