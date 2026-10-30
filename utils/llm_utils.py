@@ -7,6 +7,12 @@ from .message_utils import MessageUtils
 from .quote_utils import QuoteUtils
 from astrbot.core.provider.entites import ProviderRequest
 
+try:
+    from astrbot.core.agent.message import TextPart
+except ImportError:
+    # 旧版 AstrBot 没有这个模块，也不支持 extra_user_content_parts
+    TextPart = None
+
 class LLMUtils:
     """
     大模型调用工具类
@@ -203,38 +209,39 @@ class LLMUtils:
                     logger.warning(f"为 {platform_name} 获取群组信息失败: {e}")
             env_description += f"，你正在群聊 {group_display_name} 中。"
 
-        # 添加历史记录（文本格式，注入到 system_prompt）
+        # 添加历史记录（文本格式）
         # 注意：基于 message_id 精确排除当前消息，避免重复
-        history_limit = config.get("group_msg_history", 10)
+        history_limit = config.get("group_msg_history", 20)
         history_messages = HistoryStorage.get_history(platform_name, is_private, chat_id)
         # 模型自主引用：为聊天记录中的消息和当前消息编号，供模型用 [引用:编号] 指定要引用的消息
         quote_mode = QuoteUtils.get_mode(event, config, context)
         quote_targets = {} if quote_mode else None
         current_target = None
+        history_for_context = []
+        history_text = "\n\n你没看见任何聊天记录，看来最近没有消息。"
 
         try:
-            if history_messages:
+            if history_messages and history_limit > 0:
                 # 获取当前消息的 message_id 用于精确排除
                 current_msg_id = getattr(event.message_obj, 'message_id', None) if hasattr(event, 'message_obj') else None
                 if current_msg_id:
                     history_for_context = [m for m in history_messages if getattr(m, 'message_id', None) != current_msg_id]
                 else:
                     # 回退到排除最后一条
-                    history_for_context = history_messages[:-1] if len(history_messages) > 1 else []
+                    history_for_context = history_messages[:-1]
+                # 文本和图片都只取这些消息，保证图片说明与展示的聊天记录一致
+                history_for_context = history_for_context[-history_limit:]
                 if history_for_context:
                     formatted_history = await MessageUtils.format_history_for_llm(history_for_context, max_messages=history_limit, umo=umo, quote_targets=quote_targets)
-                    env_description += "\n\n以下是最近的聊天记录：\n" + formatted_history
-                else:
-                    env_description += "\n\n你没看见任何聊天记录，看来最近没有消息。"
-            else:
-                env_description += "\n\n你没看见任何聊天记录，看来最近没有消息。"
+                    history_text = "\n\n以下是最近的聊天记录：\n" + formatted_history
         except Exception as e:
             logger.error(f"获取或格式化历史记录失败: {e}")
-            env_description += "\n\n你没看见任何聊天记录，看来最近没有消息。"
+            history_for_context = []
 
         # 行为指引
-        env_description += "\n(在聊天记录中，你的用户名以AstrBot被代替了)"
-        env_description += "\n(如果你想回复某人，不要使用类似 [At:id(昵称)]这样的格式)"
+        notes = "\n(在聊天记录中，你的用户名以AstrBot被代替了)"
+        notes += "\n(如果你想回复某人，不要使用类似 [At:id(昵称)]这样的格式)"
+        quote_instruction = ""
         if quote_mode:
             current_no = None
             current_target = QuoteUtils.make_target(event.message_obj, "")
@@ -243,15 +250,12 @@ class LLMUtils:
                 quote_targets[current_no] = current_target
             if quote_targets:
                 event.set_extra(QuoteUtils.EXTRA_KEY, quote_targets)
-                env_description += QuoteUtils.build_instruction(quote_mode, current_no)
+                quote_instruction = QuoteUtils.build_instruction(quote_mode, current_no)
 
         if config.get("read_air", False):
-            env_description += "\n\n现在你收到了一条新消息，你的反应是:\n(如果你想发送一条消息，直接输出发送的内容，如果你选择忽略，直接输出<NO_RESPONSE>)"
+            reaction = "\n\n现在你收到了一条新消息，你的反应是:\n(如果你想发送一条消息，直接输出发送的内容，如果你选择忽略，直接输出<NO_RESPONSE>)"
         else:
-            env_description += "\n\n现在你收到了一条新消息，你决定发送一条消息回复(你输出的内容将作为消息发送)"
-
-        # 将环境描述追加到 system_prompt
-        system_prompt += env_description
+            reaction = "\n\n现在你收到了一条新消息，你决定发送一条消息回复(你输出的内容将作为消息发送)"
 
         # 图片相关处理
         image_urls = []
@@ -267,13 +271,13 @@ class LLMUtils:
                     except Exception as e:
                         logger.warning(f"处理当前消息图片URL时出错: {e}")
                         continue
+        current_image_count = len(image_urls)
 
         # 然后从历史消息中补充收集图片（受 image_count 限制）
         history_image_count = config.get("image_processing", {}).get("image_count", 0)
-        if history_image_count and history_messages:
-            messages_to_show = history_messages[-history_limit:] if len(history_messages) > history_limit else history_messages
-
-            for message in reversed(messages_to_show):
+        image_note = ""
+        if history_image_count and history_for_context:
+            for message in reversed(history_for_context):
                 if hasattr(message, "message") and message.message:
                     for component in message.message:
                         if isinstance(component, Image):
@@ -289,10 +293,11 @@ class LLMUtils:
                     if len(image_urls) >= history_image_count:
                         break
 
-            if image_urls:
-                system_prompt += f"\n\n已经按照从晚到早的顺序为你提供了聊天记录中的{len(image_urls)}张图片，你可以直接查看并理解它们。这些图片出现在聊天记录中。"
+            if len(image_urls) > current_image_count:
+                image_note = f"\n\n已经按照从晚到早的顺序为你提供了聊天记录中的{len(image_urls) - current_image_count}张图片，你可以直接查看并理解它们。这些图片出现在聊天记录中。"
 
-        # prompt 只保留用户当前消息，使用 MessageUtils 确保图片被转述
+        # prompt 只保留用户当前消息（AstrBot 的知识库检索、prompt_prefix 和其他插件都把它当作用户原话），
+        # 使用 MessageUtils 确保图片被转述
         if hasattr(event, "message_obj") and hasattr(event.message_obj, "message"):
             prompt = await MessageUtils.outline_message_list(event.message_obj.message, umo=umo)
         else:
@@ -300,13 +305,28 @@ class LLMUtils:
         if current_target:
             current_target["content"] = prompt
 
-        return event.request_llm(
+        req = event.request_llm(
             prompt=prompt,
             func_tool_manager=func_tools_mgr,
             contexts=contexts,
             system_prompt=system_prompt,
             image_urls=image_urls,
         )
+
+        if TextPart is not None and hasattr(req, "extra_user_content_parts"):
+            # 逐轮变化的内容（聊天记录、引用指令、图片说明）作为额外内容块跟在用户原话后面，
+            # system_prompt 只留静态信息、保持字节稳定，否则每轮变一次会让整段前缀的 prompt cache 全部失效
+            req.system_prompt += env_description + notes + reaction
+            part = TextPart(text=(
+                "\n\n(以上是你收到的新消息，下面是供参考的背景信息)"
+                + quote_instruction + history_text + image_note
+                + "\n\n(背景信息到此为止，你要作出反应的是最前面那条新消息)"
+            ))
+            req.extra_user_content_parts.append(part.mark_as_temp() if hasattr(part, "mark_as_temp") else part)
+        else:
+            # 旧版 AstrBot 不支持额外内容块，保持原来的布局，全部写入 system_prompt
+            req.system_prompt += env_description + history_text + notes + quote_instruction + reaction + image_note
+        return req
     
     @staticmethod
     def clear_call_status(platform_name: str, is_private_chat: bool, chat_id: str) -> None:
