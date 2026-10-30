@@ -1,0 +1,5 @@
+# GitHub 自动生成 Release 说明时排除发布 PR，只列出实际的改动 PR
+changelog:
+  exclude:
+    labels:
+      - release
