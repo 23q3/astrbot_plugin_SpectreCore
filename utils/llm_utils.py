@@ -246,7 +246,7 @@ class LLMUtils:
                 quote_targets[current_no] = current_target
             if quote_targets:
                 event.set_extra(QuoteUtils.EXTRA_KEY, quote_targets)
-                env_description += QuoteUtils.build_instruction(quote_mode, current_no)
+                tail_block += QuoteUtils.build_instruction(quote_mode, current_no)
 
         if config.get("read_air", False):
             env_description += "\n\n现在你收到了一条新消息，你的反应是:\n(如果你想发送一条消息，直接输出发送的内容，如果你选择忽略，直接输出<NO_RESPONSE>)"
