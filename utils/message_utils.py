@@ -29,9 +29,9 @@ class MessageUtils:
         Returns:
             格式化后的历史消息文本
         """
-        if not history_messages:
+        if not history_messages or max_messages <= 0:
             return ""
-        
+
         # 限制消息数量
         if len(history_messages) > max_messages:
             history_messages = history_messages[-max_messages:]

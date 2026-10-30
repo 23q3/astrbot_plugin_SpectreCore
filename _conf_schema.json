@@ -5,12 +5,6 @@
         "hint": "决定了会输入给大模型多少条q群历史消息(最多200条)",
         "default": 20
     },
-    "cache_friendly_prompt": {
-        "description": "群聊历史移出 system prompt（前缀缓存友好）",
-        "type": "bool",
-        "hint": "开启后，聊天记录与图片说明拼接到本轮 user 消息尾部，system prompt 每轮保持字节稳定，DeepSeek / OpenAI / Anthropic 等的前缀缓存才能命中（实测群聊 cached 0 → 3328 tokens）。关闭则退回旧行为（历史写入 system prompt），会破坏前缀缓存。",
-        "default": true
-    },
     "enable_all_groups": {
         "description": "回复所有群聊",
         "type": "bool",
